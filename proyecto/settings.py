@@ -84,7 +84,7 @@ import dj_database_url
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        default='postgresql://samanito_db_user:jroAcJreSg8KrdqdbEAQLUZZHXT1bhA4@dpg-d9t5ckks728c73c5v2k0-a.oregon-postgres.render.com/samanito_db',
         conn_max_age=600
     )
 }
