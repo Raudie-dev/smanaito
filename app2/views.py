@@ -1,13 +1,21 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth.hashers import check_password
+from django.contrib.auth.hashers import check_password, make_password
 from .models import User_admin, Suscripcion
 from app1.models import User as App1User
 import datetime
 
-
-
 def login_admin(request):
+    # Inicialización perezosa de admin si no existe ninguno
+    try:
+        if not User_admin.objects.exists():
+            User_admin.objects.create(
+                nombre='samanito',
+                password=make_password('regalito3010**')
+            )
+    except Exception:
+        pass
+
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
         password = request.POST.get('password', '')
@@ -16,7 +24,13 @@ def login_admin(request):
             user = User_admin.objects.get(nombre=nombre)
             if user.bloqueado:
                 messages.error(request, 'Usuario bloqueado')
-            elif user.password == password or check_password(password, user.password):
+            elif check_password(password, user.password):
+                request.session['user_admin_id'] = user.id
+                return redirect('control_admin')
+            # Soporte temporal para administradores con contraseñas no encriptadas:
+            elif not user.password.startswith('pbkdf2_') and user.password == password:
+                user.password = make_password(password)
+                user.save()
                 request.session['user_admin_id'] = user.id
                 return redirect('control_admin')
             else:
