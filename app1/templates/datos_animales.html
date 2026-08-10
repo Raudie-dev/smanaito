@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+{% block section_title %}Datos y Reportes{% endblock %}
+
+{% block head_extra %}
+<!-- Chart.js para los gráficos dinámicos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div class="mb-3 mb-md-0">
+            <h5 class="fw-bold mb-1">Módulo de Datos</h5>
+            <p class="text-muted small mb-0">Genere reportes dinámicos o importe lotes enteros de animales desde Excel.</p>
+        </div>
+        <div>
+            <button class="btn btn-primary shadow-sm w-100" data-bs-toggle="modal" data-bs-target="#modalImportar">
+                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Importar desde Excel
+            </button>
+        </div>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Zona de Reportes -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-funnel-fill me-2 text-primary"></i>Filtros Dinámicos</h6>
+        </div>
+        <div class="card-body bg-light">
+            <form id="filtrosForm" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label text-muted small">Nacidos Desde</label>
+                    <input type="date" class="form-control" id="filtroDesde" onchange="cargarReporte()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-muted small">Nacidos Hasta</label>
+                    <input type="date" class="form-control" id="filtroHasta" onchange="cargarReporte()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-muted small">Sexo</label>
+                    <select class="form-select" id="filtroSexo" onchange="actualizarFiltrosSex(); cargarReporte()">
+                        <option value="">Todos</option>
+                        <option value="M">Machos</option>
+                        <option value="H">Hembras</option>
+                    </select>
+                </div>
+                <div class="col-md-3" id="divFiltroProd">
+                    <label class="form-label text-muted small">Estado Producción (Hembras)</label>
+                    <select class="form-select" id="filtroProd" onchange="cargarReporte()">
+                        <option value="">Todos</option>
+                        <option value="LACTANCIA">En Lactancia</option>
+                        <option value="SECA">Seca / Horra</option>
+                    </select>
+                </div>
+                <div class="col-md-3" id="divFiltroGest">
+                    <label class="form-label text-muted small">Estado Gestación (Hembras)</label>
+                    <select class="form-select" id="filtroGest" onchange="cargarReporte()">
+                        <option value="">Todos</option>
+                        <option value="PREÑADA">Preñada</option>
+                        <option value="VACIA">Vacía</option>
+                    </select>
+                </div>
+                <div class="col-md-3" id="divFiltroUsoMacho" style="display:none;">
+                    <label class="form-label text-muted small">Tipo de Macho</label>
+                    <select class="form-select" id="filtroUsoMacho" onchange="cargarReporte()">
+                        <option value="">Todos</option>
+                        <option value="ENGORDE">De Engorde</option>
+                        <option value="REPRODUCTOR">Semental / Reproductor</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resultados y Gráficas -->
+    <div class="row">
+        <!-- Panel Izquierdo: Resumen y Tabla -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <h6 class="fw-bold text-dark mb-0">Total Encontrado: <span id="totalAnimales" class="text-primary fs-4 ms-2">{{ total_animales }}</span></h6>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                                <i class="bi bi-printer me-1"></i> Imprimir / PDF
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="exportarExcel()">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Exportar Excel
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Sexo</th>
+                                    <th>Producción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaResultados">
+                                <tr><td colspan="4" class="text-center text-muted">Cargando datos...</td></tr>
+                            </tbody>
+                        </table>
+                        <div class="text-muted small text-center" id="mensajeLimite" style="display:none;">Mostrando los primeros 50 resultados.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel Derecho: Gráficos -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <h6 class="text-center fw-bold text-muted small text-uppercase mb-3">Proporción por Sexo</h6>
+                    <canvas id="chartSexo" width="100" height="100"></canvas>
+                </div>
+            </div>
+            
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-center fw-bold text-muted small text-uppercase mb-3">Estados de Producción</h6>
+                    <canvas id="chartProd" width="100" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Importar Excel -->
+<div class="modal fade" id="modalImportar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Importar Inventario (Excel)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="importar_excel">
+                <div class="modal-body">
+                    <div class="alert alert-info border-0 shadow-sm small">
+                        <strong><i class="bi bi-info-circle-fill me-1"></i> Importante:</strong>
+                        El archivo Excel debe contener exactamente las columnas de nuestra plantilla base.
+                    </div>
+                    
+                    <div class="text-center mb-4">
+                        <a href="{% url 'descargar_plantilla' %}" class="btn btn-outline-success btn-sm rounded-pill px-4">
+                            <i class="bi bi-download me-1"></i> Descargar Plantilla .xlsx
+                        </a>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Seleccione su archivo lleno (.xlsx)</label>
+                        <input type="file" name="archivo_excel" class="form-control" accept=".xlsx" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-upload me-1"></i> Subir Archivo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+let chartSexo = null;
+let chartProd = null;
+
+function renderCharts(dataSexo, dataProd) {
+    const ctxSexo = document.getElementById('chartSexo').getContext('2d');
+    const ctxProd = document.getElementById('chartProd').getContext('2d');
+    
+    if (chartSexo) chartSexo.destroy();
+    if (chartProd) chartProd.destroy();
+    
+    chartSexo = new Chart(ctxSexo, {
+        type: 'doughnut',
+        data: {
+            labels: ['Machos', 'Hembras'],
+            datasets: [{
+                data: dataSexo,
+                backgroundColor: ['#2196f3', '#e91e63'],
+                borderWidth: 0
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+    });
+    
+    chartProd = new Chart(ctxProd, {
+        type: 'doughnut',
+        data: {
+            labels: ['Lactancia', 'Seca', 'Otros/Machos'],
+            datasets: [{
+                data: dataProd,
+                backgroundColor: ['#4caf50', '#ff9800', '#9e9e9e'],
+                borderWidth: 0
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+    });
+}
+
+function actualizarFiltrosSex() {
+    const sexo = document.getElementById('filtroSexo').value;
+    const divProd = document.getElementById('divFiltroProd');
+    const divGest = document.getElementById('divFiltroGest');
+    const divUso = document.getElementById('divFiltroUsoMacho');
+    
+    if (sexo === 'M') {
+        divProd.style.display = 'none';
+        divGest.style.display = 'none';
+        divUso.style.display = 'block';
+        document.getElementById('filtroProd').value = '';
+        document.getElementById('filtroGest').value = '';
+    } else if (sexo === 'H') {
+        divProd.style.display = 'block';
+        divGest.style.display = 'block';
+        divUso.style.display = 'none';
+        document.getElementById('filtroUsoMacho').value = '';
+    } else {
+        divProd.style.display = 'block';
+        divGest.style.display = 'block';
+        divUso.style.display = 'none';
+        document.getElementById('filtroUsoMacho').value = '';
+    }
+}
+
+function cargarReporte() {
+    const sexo = document.getElementById('filtroSexo').value;
+    const prod = document.getElementById('filtroProd').value;
+    const gest = document.getElementById('filtroGest').value;
+    const uso_macho = document.getElementById('filtroUsoMacho').value;
+    const desde = document.getElementById('filtroDesde').value;
+    const hasta = document.getElementById('filtroHasta').value;
+    
+    const params = new URLSearchParams({
+        sexo: sexo,
+        estado_produccion: prod,
+        estado_gestacion: gest,
+        uso_macho: uso_macho,
+        fecha_desde: desde,
+        fecha_hasta: hasta
+    });
+    
+    fetch(`/api/reportes/?${params.toString()}`)
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('totalAnimales').textContent = data.total;
+        
+        // Render Tabla
+        const tbody = document.getElementById('tablaResultados');
+        tbody.innerHTML = '';
+        if(data.animales.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay resultados.</td></tr>';
+            document.getElementById('mensajeLimite').style.display = 'none';
+        } else {
+            data.animales.forEach(a => {
+                let badge = '';
+                if(a.sexo === 'H') {
+                    if(a.estado_produccion === 'LACTANCIA') badge = '<span class="badge bg-success">Lactancia</span>';
+                    else if(a.estado_produccion === 'SECA') badge = '<span class="badge bg-warning text-dark">Seca</span>';
+                    else badge = '<span class="badge bg-secondary">Hembra</span>';
+                } else {
+                    badge = '<span class="badge bg-primary">Macho</span>';
+                }
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold">${a.codigo}</td>
+                    <td>${a.nombre}</td>
+                    <td>${a.sexo === 'M' ? 'Macho' : 'Hembra'}</td>
+                    <td>${badge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('mensajeLimite').style.display = (data.total > 50) ? 'block' : 'none';
+        }
+        
+        // Render Charts
+        renderCharts(data.grafico_sexo, data.grafico_prod);
+    });
+}
+
+// Carga Inicial
+document.addEventListener('DOMContentLoaded', cargarReporte);
+
+function exportarExcel() {
+    const sexo = document.getElementById('filtroSexo').value;
+    const prod = document.getElementById('filtroProd').value;
+    const gest = document.getElementById('filtroGest').value;
+    const uso_macho = document.getElementById('filtroUsoMacho').value;
+    const desde = document.getElementById('filtroDesde').value;
+    const hasta = document.getElementById('filtroHasta').value;
+    
+    const params = new URLSearchParams({
+        sexo: sexo,
+        estado_produccion: prod,
+        estado_gestacion: gest,
+        uso_macho: uso_macho,
+        fecha_desde: desde,
+        fecha_hasta: hasta
+    });
+    
+    window.location.href = `/datos/exportar/?${params.toString()}`;
+}
+</script>
+{% endblock %}

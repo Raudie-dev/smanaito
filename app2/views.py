@@ -1,11 +1,13 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password
-from .models import User_admin
-from .crud import crear_prueba, obtener_pruebas, eliminar_prueba
+from .models import User_admin, Suscripcion
+from app1.models import User as App1User
+import datetime
 
 
-def login(request):
+
+def login_admin(request):
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
         password = request.POST.get('password', '')
@@ -16,42 +18,71 @@ def login(request):
                 messages.error(request, 'Usuario bloqueado')
             elif user.password == password or check_password(password, user.password):
                 request.session['user_admin_id'] = user.id
-                return redirect('control')
+                return redirect('control_admin')
             else:
                 messages.error(request, 'Contraseña incorrecta')
-            return render(request, 'login.html')
+            return render(request, 'login_admin.html')
         except User_admin.DoesNotExist:
             messages.error(request, 'Usuario no encontrado')
-            return render(request, 'login.html')
+            return render(request, 'login_admin.html')
 
-    return render(request, 'login.html')
+    return render(request, 'login_admin.html')
 
+def control_admin(request):
+    if 'user_admin_id' not in request.session:
+        messages.error(request, 'No autorizado')
+        return redirect('login_admin')
+        
+    clientes = App1User.objects.all().order_by('-id')
+    # Auto-crear suscripciones faltantes
+    for cliente in clientes:
+        if not hasattr(cliente, 'suscripcion_saas'):
+            Suscripcion.objects.create(
+                usuario=cliente,
+                plan='TRIAL',
+                estado='ACTIVA',
+                fecha_vencimiento=datetime.date.today() + datetime.timedelta(days=14)
+            )
+            
+    context = {
+        'clientes': clientes,
+    }
+    return render(request, 'control_admin.html', context)
 
-def control(request):
-    user_id = request.session.get('user_admin_id')
-    if not user_id:
-        messages.error(request, 'Debe iniciar sesión primero')
-        return redirect('login')
+def toggle_bloqueo(request, user_id):
+    if 'user_admin_id' not in request.session:
+        return redirect('login_admin')
+    
     try:
-        user = User_admin.objects.get(id=user_id)
-    except User_admin.DoesNotExist:
-        messages.error(request, 'Usuario no encontrado')
-        return redirect('login')
+        user = App1User.objects.get(id=user_id)
+        user.bloqueado = not user.bloqueado
+        user.save()
+        estado = "bloqueado" if user.bloqueado else "desbloqueado"
+        messages.success(request, f"Usuario {user.nombre} {estado} exitosamente.")
+    except App1User.DoesNotExist:
+        messages.error(request, "Usuario no encontrado.")
+        
+    return redirect('control_admin')
 
-    # CRUD Prueba
+def editar_suscripcion(request):
+    if 'user_admin_id' not in request.session:
+        return redirect('login_admin')
+        
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        fecha = request.POST.get('fecha')
-        socio = request.POST.get('socio') == 'on'
-        if nombre and fecha:
-            crear_prueba(nombre, fecha, socio)
-            messages.success(request, 'Registro creado correctamente')
-        else:
-            messages.error(request, 'Todos los campos son obligatorios')
-
-    if request.method == 'POST' and 'eliminar_id' in request.POST:
-        eliminar_prueba(request.POST.get('eliminar_id'))
-        messages.success(request, 'Registro eliminado')
-
-    pruebas = obtener_pruebas()
-    return render(request, 'control.html', {'pruebas': pruebas})
+        user_id = request.POST.get('user_id')
+        plan = request.POST.get('plan')
+        estado = request.POST.get('estado')
+        fecha_vencimiento = request.POST.get('fecha_vencimiento')
+        
+        try:
+            suscripcion = Suscripcion.objects.get(usuario__id=user_id)
+            suscripcion.plan = plan
+            suscripcion.estado = estado
+            if fecha_vencimiento:
+                suscripcion.fecha_vencimiento = fecha_vencimiento
+            suscripcion.save()
+            messages.success(request, f"Suscripción actualizada exitosamente.")
+        except Suscripcion.DoesNotExist:
+            messages.error(request, "Error al actualizar suscripción.")
+            
+    return redirect('control_admin')

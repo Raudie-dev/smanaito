@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block title %}Crianza y Destete{% endblock %}
+{% block section_title %}Maternidad, Mamanto y Destete{% endblock %}
+
+{% block content %}
+<!-- Alertas de Django -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Header con Botón de Reglas -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+    <div class="mb-3 mb-md-0">
+        <h5 class="fw-bold mb-1">Módulo de Crianza</h5>
+        <p class="text-muted small mb-0">Gestione a los animales jóvenes según sus reglas personalizadas de la finca.</p>
+    </div>
+    <button class="btn btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalReglasCrianza">
+        <i class="bi bi-gear-fill me-1"></i> Preferencias del Módulo
+    </button>
+</div>
+
+{% if not config.usar_mamanto and not config.usar_destete %}
+<div class="card shadow-sm border-0">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-power text-muted mb-3" style="font-size: 3rem;"></i>
+        <h4 class="fw-bold text-muted">Módulo Desactivado</h4>
+        <p class="text-muted mb-4">Usted ha desactivado tanto el seguimiento de Mamanto como las alertas de Destete.</p>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalReglasCrianza">
+            <i class="bi bi-toggle-on me-2"></i>Activar Módulos
+        </button>
+    </div>
+</div>
+{% else %}
+    <div class="row g-4">
+        <!-- Alertas de Destete -->
+        {% if config.usar_destete %}
+        <div class="col-12">
+            <div class="card shadow-sm border-0 border-start border-danger border-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <h6 class="mb-0 fw-bold text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i> Próximos a Destetar (>= {{ config.meses_destete }} Meses)</h6>
+                    <span class="badge bg-danger rounded-pill">{{ alertas_destete.count }} Becerros</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-nowrap">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th class="ps-3">Código/Nombre</th>
+                                    <th>Edad</th>
+                                    <th>Madre</th>
+                                    <th class="text-end pe-3">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for b in alertas_destete %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <div class="fw-bold text-dark">{{ b.codigo }}</div>
+                                        <div class="small text-muted">{{ b.nombre }}</div>
+                                    </td>
+                                    <td><span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">{{ b.edad_meses }} Meses</span></td>
+                                    <td class="small">
+                                        {% if b.mama %}
+                                            <i class="bi bi-diagram-3 me-1 text-muted"></i>{{ b.mama.codigo }}
+                                        {% else %}
+                                            <span class="text-muted fst-italic">Desconocida</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <button class="btn btn-sm btn-danger px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDestetar" onclick="prepararDestete('{{ b.id }}', '{{ b.codigo }}')">
+                                            Destetar
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle fs-3 text-success d-block mb-2"></i>
+                                        Al día de hoy, ningún becerro ha superado los {{ config.meses_destete }} meses de edad.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Mamanto Extra -->
+    {% if config.usar_mamanto %}
+    <div class="card shadow-sm border-0 mt-4 border-start border-success border-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <h6 class="mb-0 fw-bold text-success"><i class="bi bi-heart-pulse me-2"></i>Becerros en Mamanto Extra (< {{ config.meses_mamanto }} Meses)</h6>
+            <span class="badge bg-success rounded-pill">{{ mamanto.count }} Becerros</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-nowrap">
+                    <thead class="table-light text-muted small">
+                        <tr>
+                            <th class="ps-4">Código / Nombre</th>
+                            <th>Sexo</th>
+                            <th>Edad Est.</th>
+                            <th>Madre</th>
+                            <th>Nacimiento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in mamanto %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark">{{ b.codigo }}</div>
+                                <div class="small text-muted">{{ b.nombre }}</div>
+                            </td>
+                            <td>
+                                {% if b.sexo == 'M' %}
+                                    <i class="bi bi-gender-male text-primary" title="Macho"></i>
+                                {% else %}
+                                    <i class="bi bi-gender-female text-danger" title="Hembra"></i>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-success bg-opacity-10 text-success border border-success-subtle">{{ b.edad_meses }} Meses</span></td>
+                            <td>
+                                {% if b.mama %}
+                                    <span class="badge bg-light text-dark border"><i class="bi bi-diagram-3 me-1"></i>{{ b.mama.codigo }}</span>
+                                {% else %}
+                                    <span class="text-muted small">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">{{ b.fecha_nacimiento|date:"d M, Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="bi bi-emoji-smile fs-3 d-block mb-2"></i>
+                                No hay becerros en edad de mamanto actualmente.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+{% endif %}
+
+<!-- Modal Configuración de Reglas -->
+<div class="modal fade" id="modalReglasCrianza" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-gear me-2"></i>Preferencias de Crianza</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body p-4 bg-light">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="guardar_configuracion">
+                    
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-body">
+                            <div class="form-check form-switch fs-5 mb-2">
+                                <input class="form-check-input" type="checkbox" name="usar_mamanto" id="switchMamanto" {% if config.usar_mamanto %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-success" for="switchMamanto">1. Control de Mamanto Extra</label>
+                            </div>
+                            <p class="small text-muted mb-3 ms-4">Registra a los becerros que reciben leche adicional.</p>
+                            <div class="input-group ms-4 w-75">
+                                <span class="input-group-text bg-white">Hasta los:</span>
+                                <input type="number" name="meses_mamanto" class="form-control fw-bold" value="{{ config.meses_mamanto }}" min="1" max="12" required>
+                                <span class="input-group-text bg-white">Meses</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="form-check form-switch fs-5 mb-2">
+                                <input class="form-check-input" type="checkbox" name="usar_destete" id="switchDestete" {% if config.usar_destete %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-danger" for="switchDestete">2. Alertas de Destete</label>
+                            </div>
+                            <p class="small text-muted mb-3 ms-4">Te avisará automáticamente cuando un animal deba separarse de su madre.</p>
+                            <div class="input-group ms-4 w-75">
+                                <span class="input-group-text bg-white">A partir de:</span>
+                                <input type="number" name="meses_destete" class="form-control fw-bold" value="{{ config.meses_destete }}" min="1" max="24" required>
+                                <span class="input-group-text bg-white">Meses</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-2"></i>Guardar Preferencias</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Destetar -->
+<div class="modal fade" id="modalDestetar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-scissors me-2"></i>Procesar Destete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body p-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="destetar_animal">
+                    <input type="hidden" name="animal_id" id="inputDesteteId">
+                    
+                    <div class="alert alert-danger bg-opacity-10 border-danger-subtle">
+                        Está a punto de destetar al animal <strong id="lblDesteteCodigo" class="text-danger"></strong>. Dejará de aparecer en este módulo.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">¿A qué rebaño lo asignará? (Opcional)</label>
+                        <select name="rebano_id" class="form-select">
+                            <option value="">Mantenerlo sin rebaño fijo (Smart Rebaños)</option>
+                            {% for r in rebanos %}
+                                <option value="{{ r.id }}">{{ r.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text text-muted small"><i class="bi bi-info-circle me-1"></i>Si usa Smart Rebaños (ej. Rebaño Mautes autocalculado por edad), puede dejar esto en blanco y el sistema lo agrupará solo.</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger px-4">Confirmar Destete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function prepararDestete(id, codigo) {
+    document.getElementById('inputDesteteId').value = id;
+    document.getElementById('lblDesteteCodigo').textContent = codigo;
+}
+</script>
+{% endblock %}

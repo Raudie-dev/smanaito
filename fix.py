@@ -1,0 +1,11 @@
+import re
+c = open('app1/views.py').read()
+c = c.replace(",,", ",")
+c = re.sub(r',\s*,', ',', c)
+c = c.replace("'config': config,\n,\n        'fincas_usuario': fincas_usuario,", "'config': config,\n        'fincas_usuario': fincas_usuario,")
+c = c.replace("'filtro_rebano': filtro_rebano,\n,\n        'fincas_usuario': fincas_usuario,", "'filtro_rebano': filtro_rebano,\n        'fincas_usuario': fincas_usuario,")
+c = c.replace("'total_30_dias': total_30_dias,\n,\n        'fincas_usuario': fincas_usuario,", "'total_30_dias': total_30_dias,\n        'fincas_usuario': fincas_usuario,")
+c = c.replace("'rebanos': rebanos,\n,\n        'fincas_usuario': fincas_usuario,", "'rebanos': rebanos,\n        'fincas_usuario': fincas_usuario,")
+c = c.replace("\n,\n        'fincas_usuario':", ",\n        'fincas_usuario':")
+c = c.replace("config,,", "config,")
+open('app1/views.py','w').write(c)

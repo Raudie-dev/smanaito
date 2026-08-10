@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% block section_title %}Venta de Animales{% endblock %}
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div class="mb-3 mb-md-0">
+            <h5 class="fw-bold mb-1">Módulo de Ventas</h5>
+            <p class="text-muted small mb-0">Registre y administre las ventas de animales de la finca.</p>
+        </div>
+        <div>
+            <button class="btn btn-primary shadow-sm w-100" data-bs-toggle="modal" data-bs-target="#modalVenta">
+                <i class="bi bi-cash-coin me-1"></i> Registrar Venta
+            </button>
+        </div>
+    </div>
+    
+    <!-- Resumen -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100 border-0 border-start border-primary border-4">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small mb-2">Total Animales Vendidos</h6>
+                    <h3 class="fw-bold text-dark mb-0">{{ total_vendidos }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100 border-0 border-start border-success border-4">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase small mb-2">Total Kilos Vendidos (Sacrificio)</h6>
+                    <h3 class="fw-bold text-dark mb-0">{{ total_kilos|floatformat:1 }} Kg</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mensajes de exito / error -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Historial de Ventas -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Historial de Ventas</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted small text-uppercase">
+                        <tr>
+                            <th class="ps-4">Fecha</th>
+                            <th>Animal(es) Vendido(s)</th>
+                            <th>Motivo</th>
+                            <th>Kilos</th>
+                            <th>Precio Total</th>
+                            <th>Comprador</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in ventas %}
+                        <tr>
+                            <td class="ps-4">{{ v.fecha_venta|date:"d M Y" }}</td>
+                            <td>
+                                {% for a in v.animales.all %}
+                                    <span class="badge bg-secondary mb-1">{{ a.codigo }}</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                {% if v.motivo == 'CRIA' %}
+                                <span class="badge bg-info text-dark">Cría / Vida</span>
+                                {% else %}
+                                <span class="badge bg-danger">Sacrificio</span>
+                                {% endif %}
+                            </td>
+                            <td>{% if v.kilos %}{{ v.kilos }} Kg{% else %}-{% endif %}</td>
+                            <td>{% if v.precio_total %}${{ v.precio_total }}{% else %}-{% endif %}</td>
+                            <td>{{ v.comprador|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No hay ventas registradas.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Venta -->
+<div class="modal fade" id="modalVenta" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Registrar Venta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="registrar_venta">
+                <div class="modal-body">
+                    <div class="mb-3 position-relative">
+                        <label class="form-label text-muted small">Buscar y Añadir Animales (Lote)</label>
+                        <input type="text" id="buscadorAnimal" class="form-control" placeholder="Escriba código o nombre..." autocomplete="off">
+                        <div id="resultadosBusqueda" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1050; display: none; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Animales Seleccionados para Venta</label>
+                        <div id="animalesSeleccionados" class="d-flex flex-wrap gap-2 border rounded p-2 bg-light min-h-50">
+                            <span class="text-muted small fst-italic" id="emptyCart">Aún no ha seleccionado animales.</span>
+                        </div>
+                        <div id="hiddenInputsContainer"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Motivo de Venta</label>
+                        <select name="motivo" id="selectMotivo" class="form-select" required onchange="toggleKilos()">
+                            <option value="CRIA">Para Cría / Vida</option>
+                            <option value="SACRIFICIO">Para Sacrificio (Kilos)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="divKilos" style="display: none;">
+                        <label class="form-label text-muted small">Kilos del Animal (Obligatorio para Sacrificio)</label>
+                        <input type="number" name="kilos" id="inputKilos" class="form-control" step="0.01" min="1">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-muted small">Precio Total ($)</label>
+                            <input type="number" name="precio_total" class="form-control" step="0.01" min="0" placeholder="Opcional">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-muted small">Comprador</label>
+                            <input type="text" name="comprador" class="form-control" placeholder="Opcional">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2" placeholder="Detalles de la venta..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4">Guardar Venta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleKilos() {
+    const motivo = document.getElementById('selectMotivo').value;
+    const divKilos = document.getElementById('divKilos');
+    const inputKilos = document.getElementById('inputKilos');
+    
+    if (motivo === 'SACRIFICIO') {
+        divKilos.style.display = 'block';
+        inputKilos.setAttribute('required', 'required');
+    } else {
+        divKilos.style.display = 'none';
+        inputKilos.removeAttribute('required');
+        inputKilos.value = '';
+    }
+}
+toggleKilos();
+
+// Autocompletado y Carrito de Animales
+let typingTimer;
+const buscador = document.getElementById('buscadorAnimal');
+const resultados = document.getElementById('resultadosBusqueda');
+const container = document.getElementById('animalesSeleccionados');
+const hiddenContainer = document.getElementById('hiddenInputsContainer');
+const emptyCart = document.getElementById('emptyCart');
+let seleccionados = new Set();
+
+buscador.addEventListener('input', function() {
+    clearTimeout(typingTimer);
+    const query = this.value.trim();
+    if(query.length === 0) {
+        resultados.style.display = 'none';
+        return;
+    }
+    
+    typingTimer = setTimeout(() => {
+        fetch(`/api/buscar_animal_vivo/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            resultados.innerHTML = '';
+            if(data.results.length === 0) {
+                resultados.innerHTML = '<div class="list-group-item text-muted small">No se encontraron animales vivos.</div>';
+            } else {
+                data.results.forEach(item => {
+                    if(!seleccionados.has(item.id.toString())) {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.className = 'list-group-item list-group-item-action text-primary fw-bold';
+                        a.textContent = item.text;
+                        a.onclick = function(e) {
+                            e.preventDefault();
+                            agregarAlLote(item.id, item.text);
+                            buscador.value = '';
+                            resultados.style.display = 'none';
+                        };
+                        resultados.appendChild(a);
+                    }
+                });
+                if(resultados.innerHTML === '') {
+                    resultados.innerHTML = '<div class="list-group-item text-muted small">Ya seleccionaste a estos animales.</div>';
+                }
+            }
+            resultados.style.display = 'block';
+        });
+    }, 300);
+});
+
+// Cerrar resultados si se hace click fuera
+document.addEventListener('click', function(e) {
+    if(!buscador.contains(e.target) && !resultados.contains(e.target)) {
+        resultados.style.display = 'none';
+    }
+});
+
+function agregarAlLote(id, text) {
+    if(seleccionados.has(id.toString())) return;
+    
+    seleccionados.add(id.toString());
+    emptyCart.style.display = 'none';
+    
+    // Crear Pildora
+    const badge = document.createElement('span');
+    badge.className = 'badge bg-primary d-flex align-items-center fs-6';
+    badge.id = `badge_${id}`;
+    badge.innerHTML = `
+        ${text}
+        <i class="bi bi-x-circle-fill ms-2 cursor-pointer text-white" style="cursor: pointer;" onclick="removerDelLote(${id})"></i>
+    `;
+    container.appendChild(badge);
+    
+    // Crear Input Oculto
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'animal_ids';
+    input.value = id;
+    input.id = `input_${id}`;
+    hiddenContainer.appendChild(input);
+}
+
+window.removerDelLote = function(id) {
+    seleccionados.delete(id.toString());
+    document.getElementById(`badge_${id}`).remove();
+    document.getElementById(`input_${id}`).remove();
+    if(seleccionados.size === 0) {
+        emptyCart.style.display = 'block';
+    }
+};
+
+</script>
+{% endblock %}

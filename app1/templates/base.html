@@ -1,0 +1,275 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ganadería Pro{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'img/Samanito_logo.png' %}">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="{% url 'manifest' %}">
+    <meta name="theme-color" content="#2e7d32">
+    <link rel="apple-touch-icon" href="{% static 'img/Samanito_logo.png' %}">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- Custom Dashboard Styles -->
+    <link rel="stylesheet" href="{% static 'css/paneles-style.css' %}?v={% now 'U' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <nav id="sidebar" class="p-3 d-flex flex-column">
+        <div class="sidebar-header pb-3 mb-3 text-center">
+            <div class="d-flex align-items-center justify-content-center mb-2">
+                <div class="bg-white rounded-circle d-flex align-items-center justify-content-center me-2 shadow-sm" style="width: 65px; height: 65px; padding: 5px;">
+                    <img src="{% static 'img/Samanito_logo.png' %}" alt="Samanito" class="img-fluid" style="max-height: 50px;">
+                </div>
+                <h4 class="mb-0 fw-bold text-white">Samanito</h4>
+            </div>
+            
+            <div class="mt-3 px-2 text-start">
+                <form action="{% url 'cambiar_finca' %}" method="POST" id="form-cambiar-finca">
+                    {% csrf_token %}
+                    <select name="finca_id" class="form-select form-select-sm bg-dark text-white border-secondary mb-2" onchange="document.getElementById('form-cambiar-finca').submit()">
+                        {% for f in fincas_usuario %}
+                            <option value="{{ f.id }}" {% if request.session.finca_activa_id == f.id %}selected{% endif %}>{{ f.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                <button class="btn btn-sm btn-outline-success w-100" data-bs-toggle="modal" data-bs-target="#modalCrearFinca">
+                    <i class="bi bi-plus-circle"></i> Nueva Finca
+                </button>
+            </div>
+        </div>
+        
+        <ul class="nav nav-pills flex-column mb-auto">
+            <li class="nav-item">
+                <a href="{% url 'control' %}" class="nav-link {% if request.resolver_match.url_name == 'control' %}active{% endif %}">
+                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Gestión Animal</small>
+                <a href="{% url 'registro' %}" class="nav-link {% if request.resolver_match.url_name == 'registro' %}active{% endif %}">
+                    <i class="bi bi-pencil-square me-2"></i> Registro de Animales
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'datos_animales' %}" class="nav-link {% if request.resolver_match.url_name == 'datos_animales' %}active{% endif %}">
+                    <i class="bi bi-bar-chart-fill me-2"></i> Datos y Reportes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'rebaño' %}" class="nav-link {% if request.resolver_match.url_name == 'rebaño' %}active{% endif %}">
+                    <i class="bi bi-grid-3x3-gap me-2"></i> Gestión de Rebaños
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'crianza' %}" class="nav-link {% if request.resolver_match.url_name == 'crianza' %}active{% endif %}">
+                    <i class="bi bi-heart-pulse me-2"></i> Crianza y Destete
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <small class="text-uppercase fw-bold mt-4 mb-2 d-block ps-3" style="font-size: 0.75rem; letter-spacing: 1px;">Producción</small>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'ordeño' %}active{% endif %}" href="{% url 'ordeño' %}">
+                        <i class="bi bi-droplet-half me-2"></i> Control de Ordeño
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'ventas' %}active{% endif %}" href="{% url 'ventas' %}">
+                        <i class="bi bi-cash-coin me-2"></i> Venta de Animales
+                    </a>
+                </li>
+            </li>
+            
+            <li class="nav-item mt-2">
+                <small class="text-uppercase fw-bold mt-4 mb-2 d-block ps-3 text-danger" style="font-size: 0.75rem; letter-spacing: 1px;">Sanidad</small>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'vacunacion' %}active{% endif %}" href="{% url 'vacunacion' %}">
+                        <i class="bi bi-shield-plus me-2"></i> Planes de Vacunación
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'incidentes' %}active{% endif %}" href="{% url 'incidentes' %}">
+                        <i class="bi bi-heartbreak me-2"></i> Incidentes Clínicos
+                    </a>
+                </li>
+            </li>
+        </ul>
+        
+        <hr>
+        <div class="dropdown">
+            <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-person-circle me-2"></i>
+                <strong>Admin</strong>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+                <li><a class="dropdown-item" href="#">Configuración</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'login' %}">Cerrar sesión</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div id="content">
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <nav class="navbar navbar-expand-lg navbar-light bg-white px-4">
+            <div class="container-fluid">
+                <!-- Hamburger Menu -->
+                <button class="btn btn-light d-lg-none me-2" id="sidebarToggle" type="button">
+                    <i class="bi bi-list fs-4"></i>
+                </button>
+                <span class="navbar-text fw-bold text-dark d-none d-sm-block">
+                    {% block section_title %}Sistema Ganadero{% endblock %}
+                </span>
+                <span class="navbar-text fw-bold text-dark d-block d-sm-none fs-6">
+                    {% for f in fincas_usuario %}
+                        {% if f.id == request.session.finca_activa_id %}
+                            <i class="bi bi-pin-map-fill text-primary me-1"></i> {{ f.nombre }}
+                        {% endif %}
+                    {% endfor %}
+                    {% if not request.session.finca_activa_id %}Samanito{% endif %}
+                </span>
+                <div class="ms-auto d-flex align-items-center">
+                    {% for f in fincas_usuario %}
+                        {% if f.id == request.session.finca_activa_id %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle me-3 py-2 px-3 d-none d-md-inline-block">
+                                <i class="bi bi-pin-map-fill me-1"></i> Finca: {{ f.nombre }}
+                            </span>
+                        {% endif %}
+                    {% endfor %}
+                    <span class="badge bg-success me-2 py-2">En línea</span>
+                    <span class="text-muted fw-medium small d-none d-lg-inline" id="liveClock">Cargando fecha...</span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container-fluid px-4">
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Registrar Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register("{% url 'sw' %}")
+                    .catch(function(err) {
+                        console.log('Service Worker falló', err);
+                    });
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Sidebar Toggle
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.getElementById('sidebarToggle');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            function openSidebar() {
+                sidebar.classList.add('active');
+                overlay.classList.add('active');
+                document.body.classList.add('sidebar-open');
+                // Scroll sidebar al top cuando se abre
+                sidebar.scrollTop = 0;
+            }
+
+            function closeSidebar() {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
+            }
+
+            if (toggle && sidebar) {
+                toggle.addEventListener('click', function() {
+                    if (sidebar.classList.contains('active')) {
+                        closeSidebar();
+                    } else {
+                        openSidebar();
+                    }
+                });
+            }
+            if (overlay) {
+                overlay.addEventListener('click', closeSidebar);
+            }
+
+            // Cerrar sidebar al tocar un link en móvil
+            sidebar.querySelectorAll('a.nav-link').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 992) {
+                        closeSidebar();
+                    }
+                });
+            });
+        });
+
+        // Reloj
+        function updateClock() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            const timeString = now.toLocaleDateString('es-ES', options);
+            // Capitalize first letter of weekday
+            document.getElementById('liveClock').textContent = timeString.charAt(0).toUpperCase() + timeString.slice(1);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+    
+    <!-- Modal Crear Finca -->
+    <div class="modal fade" id="modalCrearFinca" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Crear Nueva Finca</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{% url 'crear_finca' %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre de la Finca</label>
+                            <input type="text" name="nombre" class="form-control" required placeholder="Ej: Finca Las Palmas">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Guardar Finca</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% block extra_js %}{% endblock %}
+
+    {% if mostrar_modal_bienvenida %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var myModal = new bootstrap.Modal(document.getElementById('modalCrearFinca'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+            myModal.show();
+            // Ocultar botones de cancelar para forzar creación
+            const btnClose = document.querySelector('#modalCrearFinca .btn-close');
+            if (btnClose) btnClose.style.display = 'none';
+            const btnCancel = document.querySelector('#modalCrearFinca .btn-secondary');
+            if (btnCancel) btnCancel.style.display = 'none';
+            const title = document.querySelector('#modalCrearFinca .modal-title');
+            if (title) title.innerText = '¡Bienvenido! Nombra tu primera finca';
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

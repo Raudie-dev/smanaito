@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Rebaños{% endblock %}
+{% block section_title %}Gestión de Rebaños{% endblock %}
+
+{% block content %}
+<!-- Alertas de Django -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-4 mb-4 gap-3">
+    <h3 class="fw-bold text-dark mb-0"><i class="bi bi-grid-3x3-gap me-2 text-primary"></i> Rebaños Registrados</h3>
+    <div class="d-flex flex-column flex-sm-row gap-2">
+        <form method="POST" class="d-inline w-100">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="generar_estandares">
+            <button type="submit" class="btn btn-outline-success shadow-sm w-100">
+                <i class="bi bi-magic me-1"></i> Generar Estándares
+            </button>
+        </form>
+        <button class="btn btn-primary shadow-sm w-100" data-bs-toggle="modal" data-bs-target="#modalRebaño" onclick="openModalCrear()">
+            <i class="bi bi-plus-lg me-1"></i> Crear Rebaño
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    {% for r in rebanos %}
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100" style="border-left: 5px solid {% if r.es_dinamico %}var(--accent-color){% else %}var(--primary-light){% endif %};">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="h5 font-weight-bold text-dark mb-1">{{ r.nombre }}</div>
+                    {% if r.es_dinamico %}
+                        <div class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-lightning-fill me-1"></i> Dinámico</div>
+                    {% else %}
+                        <div class="badge bg-primary bg-opacity-10 text-primary px-2 py-1"><i class="bi bi-pin-angle-fill me-1"></i> Fijo</div>
+                    {% endif %}
+                </div>
+                <div class="h6 mb-3 text-gray-800">
+                    <i class="bi bi-heptagon-half me-1 text-success"></i> 
+                    <strong>{{ r.cantidad_animales }}</strong> Animales
+                </div>
+                
+                <p class="small text-muted mb-4" style="min-height: 40px;">
+                    {{ r.descripcion|default:"Sin descripción registrada."|truncatechars:60 }}
+                </p>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'registro' %}?rebano={{ r.id }}" class="btn btn-sm btn-outline-primary w-100 me-2">Ver Animales</a>
+                    <button class="btn btn-sm btn-outline-secondary px-3" 
+                            data-bs-toggle="modal" data-bs-target="#modalRebaño"
+                            onclick="openModalEditar('{{ r.id }}', '{{ r.nombre }}', '{{ r.descripcion }}', '{{ r.es_dinamico }}', '{{ r.filtro_sexo }}', '{{ r.filtro_edad_min_meses }}', '{{ r.filtro_edad_max_meses }}', '{{ r.filtro_estado_gestacion }}', '{{ r.filtro_estado_produccion }}', '{{ r.filtro_uso_macho }}')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card shadow-sm bg-light">
+            <div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                <h5>Aún no hay rebaños registrados</h5>
+                <p>Crea tu primer rebaño o genera los rebaños estándar para empezar.</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal Crear / Editar Rebaño -->
+<div class="modal fade" id="modalRebaño" tabindex="-1" aria-labelledby="modalRebañoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalRebañoLabel"><i class="bi bi-plus-circle me-2"></i>Gestión de Rebaño</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="rebano_id" id="inputRebanoId">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Nombre del Rebaño</label>
+                            <input type="text" name="nombre" id="inputNombre" class="form-control" placeholder="Ej: Lote A" required>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" role="switch" id="switchDinamico" name="es_dinamico">
+                                <label class="form-check-label fw-bold" for="switchDinamico">Hacer Dinámico (Smart Rebaño)</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Descripción (Opcional)</label>
+                            <textarea name="descripcion" id="inputDescripcion" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div id="opcionesDinamicas" style="display: none;" class="mt-4 p-3 bg-light rounded border">
+                        <h6 class="text-primary fw-bold mb-3"><i class="bi bi-funnel me-2"></i>Reglas de Filtrado Automático</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label small">Sexo</label>
+                                <select name="filtro_sexo" id="fSexo" class="form-select">
+                                    <option value="">Ambos</option>
+                                    <option value="H">Solo Hembras</option>
+                                    <option value="M">Solo Machos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Edad Mínima (Meses)</label>
+                                <input type="number" name="filtro_edad_min_meses" id="fMin" class="form-control" min="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Edad Máxima (Meses)</label>
+                                <input type="number" name="filtro_edad_max_meses" id="fMax" class="form-control" min="0">
+                            </div>
+                            
+                            <!-- Filtros granulares -->
+                            <div class="col-md-4" id="divGestacion" style="display:none;">
+                                <label class="form-label small">Estado Gestación</label>
+                                <select name="filtro_estado_gestacion" id="fGestacion" class="form-select">
+                                    <option value="">Cualquiera</option>
+                                    <option value="VACIA">Vacía</option>
+                                    <option value="PREÑADA">Preñada</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4" id="divProduccion" style="display:none;">
+                                <label class="form-label small">Estado Producción</label>
+                                <select name="filtro_estado_produccion" id="fProduccion" class="form-select">
+                                    <option value="">Cualquiera</option>
+                                    <option value="LACTANCIA">En Lactancia</option>
+                                    <option value="SECA">Seca / Horra</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4" id="divUso" style="display:none;">
+                                <label class="form-label small">Propósito Macho</label>
+                                <select name="filtro_uso_macho" id="fUso" class="form-select">
+                                    <option value="">Cualquiera</option>
+                                    <option value="REPRODUCTOR">Reproductor</option>
+                                    <option value="ENGORDE">Engorde</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-2"></i>Guardar Rebaño</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const switchDinamico = document.getElementById('switchDinamico');
+        const divOpciones = document.getElementById('opcionesDinamicas');
+        const fSexo = document.getElementById('fSexo');
+        
+        const divGestacion = document.getElementById('divGestacion');
+        const divProduccion = document.getElementById('divProduccion');
+        const divUso = document.getElementById('divUso');
+        
+        function checkVisibility() {
+            if(switchDinamico.checked) {
+                divOpciones.style.display = 'block';
+                if(fSexo.value === 'H') {
+                    divGestacion.style.display = 'block';
+                    divProduccion.style.display = 'block';
+                    divUso.style.display = 'none';
+                } else if(fSexo.value === 'M') {
+                    divGestacion.style.display = 'none';
+                    divProduccion.style.display = 'none';
+                    divUso.style.display = 'block';
+                } else {
+                    divGestacion.style.display = 'none';
+                    divProduccion.style.display = 'none';
+                    divUso.style.display = 'none';
+                }
+            } else {
+                divOpciones.style.display = 'none';
+            }
+        }
+        
+        switchDinamico.addEventListener('change', checkVisibility);
+        fSexo.addEventListener('change', checkVisibility);
+    });
+
+    function openModalCrear() {
+        document.getElementById('inputRebanoId').value = '';
+        document.getElementById('inputNombre').value = '';
+        document.getElementById('inputDescripcion').value = '';
+        document.getElementById('switchDinamico').checked = false;
+        
+        document.getElementById('fSexo').value = '';
+        document.getElementById('fMin').value = '';
+        document.getElementById('fMax').value = '';
+        document.getElementById('fGestacion').value = '';
+        document.getElementById('fProduccion').value = '';
+        document.getElementById('fUso').value = '';
+        document.getElementById('switchDinamico').dispatchEvent(new Event('change'));
+    }
+
+    function openModalEditar(id, nombre, desc, es_dinamico, sexo, min, max, gestacion, produccion, uso) {
+        document.getElementById('inputRebanoId').value = id;
+        document.getElementById('inputNombre').value = nombre;
+        document.getElementById('inputDescripcion').value = desc === 'None' ? '' : desc;
+        document.getElementById('switchDinamico').checked = (es_dinamico === 'True');
+        
+        document.getElementById('fSexo').value = sexo === 'None' ? '' : sexo;
+        document.getElementById('fMin').value = min === 'None' ? '' : min;
+        document.getElementById('fMax').value = max === 'None' ? '' : max;
+        document.getElementById('fGestacion').value = gestacion === 'None' ? '' : gestacion;
+        document.getElementById('fProduccion').value = produccion === 'None' ? '' : produccion;
+        document.getElementById('fUso').value = uso === 'None' ? '' : uso;
+        
+        document.getElementById('switchDinamico').dispatchEvent(new Event('change'));
+    }
+</script>
+{% endblock %}

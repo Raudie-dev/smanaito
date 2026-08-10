@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block section_title %}Vacunación{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+        <div>
+            <h5 class="fw-bold mb-1">Planes de Vacunación</h5>
+            <p class="text-muted small mb-0">Gestione y programe jornadas de sanidad.</p>
+        </div>
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalProgramar">
+            <i class="bi bi-calendar-plus me-1"></i> Programar
+        </button>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <!-- Pendientes -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-0 border-top border-warning border-3 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history text-warning me-2"></i>Próximas Vacunaciones</h6>
+                </div>
+                <div class="card-body bg-light">
+                    {% if pendientes %}
+                        {% for plan in pendientes %}
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="fw-bold text-dark mb-0">{{ plan.vacuna }}</h6>
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-calendar me-1"></i>{{ plan.fecha_programada|date:"d M Y" }}</span>
+                                </div>
+                                <p class="small text-muted mb-2">
+                                    <strong>Objetivo:</strong> {% if plan.rebaño %}{{ plan.rebaño.nombre }}{% else %}Toda la Finca{% endif %}
+                                </p>
+                                {% if plan.observaciones %}
+                                <p class="small text-muted mb-3 fst-italic">"{{ plan.observaciones }}"</p>
+                                {% endif %}
+                                
+                                <form method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="completar_vacuna">
+                                    <input type="hidden" name="vacuna_id" value="{{ plan.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-success w-100" onclick="return confirm('¿Confirmar que la vacunación fue completada?');">
+                                        <i class="bi bi-check2-circle me-1"></i> Marcar Completada
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-calendar-check fs-1 text-light mb-2"></i>
+                            <p class="small">No hay jornadas pendientes.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Historial -->
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm border-0 border-top border-success border-3 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-check-circle-fill text-success me-2"></i>Historial (Completadas)</h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for plan in completadas %}
+                        <li class="list-group-item px-4 py-3 bg-light">
+                            <div class="d-flex justify-content-between">
+                                <div class="fw-bold">{{ plan.vacuna }}</div>
+                                <small class="text-success fw-bold">{{ plan.fecha_aplicacion|date:"d M Y" }}</small>
+                            </div>
+                            <small class="text-muted d-block mt-1">{% if plan.rebaño %}{{ plan.rebaño.nombre }}{% else %}Población General{% endif %}</small>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center text-muted py-4 bg-light">Aún no hay historial de vacunaciones.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Programar -->
+<div class="modal fade" id="modalProgramar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Programar Vacuna</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="programar_vacuna">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Nombre de la Vacuna</label>
+                        <input type="text" name="vacuna" class="form-control" placeholder="Ej. Aftosa, Rabia" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Fecha Programada</label>
+                        <input type="date" name="fecha_programada" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Población Objetivo</label>
+                        <select name="rebano_id" class="form-select">
+                            <option value="">Aplicar a TODA LA FINCA</option>
+                            {% for r in rebaños %}
+                            <option value="{{ r.id }}">Solo Rebaño: {{ r.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Observaciones / Lote (Opcional)</label>
+                        <textarea name="observaciones" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-calendar-check me-1"></i> Agendar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

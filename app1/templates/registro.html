@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+
+{% block title %}Registro de Animales{% endblock %}
+{% block section_title %}Gestión de Animales{% endblock %}
+
+{% block content %}
+<!-- Alertas de Django -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-card-list me-2"></i> Inventario de Animales</h5>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalRegistroAnimal" onclick="openModalCrearAnimal()">
+            <i class="bi bi-plus-lg me-1"></i> Registrar Animal
+        </button>
+    </div>
+    
+    <div class="card-body bg-light border-bottom">
+        <!-- Buscador y Filtros -->
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label text-muted small mb-1">Buscar por Código o Nombre</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="Ej: GAN-001 o Lola" value="{{ q }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small mb-1">Filtro por Sexo</label>
+                <select name="sexo" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="M" {% if filtro_sexo == 'M' %}selected{% endif %}>Macho</option>
+                    <option value="H" {% if filtro_sexo == 'H' %}selected{% endif %}>Hembra</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small mb-1">Filtro por Rebaño</label>
+                <select name="rebano" class="form-select">
+                    <option value="">Todos los rebaños</option>
+                    {% for r in rebanos %}
+                        <option value="{{ r.id }}" {% if filtro_rebano == r.id|stringformat:"s" %}selected{% endif %}>{{ r.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100" title="Filtrar">
+                    <i class="bi bi-funnel"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla de Animales -->
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 text-nowrap">
+            <thead class="table-light text-muted" style="font-size: 0.85rem;">
+                <tr>
+                    <th class="ps-4">Código / Nombre</th>
+                    <th>Propietario</th>
+                    <th>Sexo</th>
+                    <th>Estado Prod/Gest</th>
+                    <th>Rebaño (Fijo)</th>
+                    <th>Edad / Nacimiento</th>
+                    <th class="text-end pe-4">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for animal in animales %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="fw-bold text-primary">{{ animal.codigo }}</div>
+                        <div class="small text-muted">{{ animal.nombre }}</div>
+                    </td>
+                    <td>
+                        {% if animal.propietario %}
+                            <span class="badge bg-light text-dark border"><i class="bi bi-person"></i> {{ animal.propietario }}</span>
+                        {% else %}
+                            <span class="text-muted small">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if animal.sexo == 'M' %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-gender-male"></i> Macho</span>
+                        {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger"><i class="bi bi-gender-female"></i> Hembra</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if animal.sexo == 'H' %}
+                            {% if animal.estado_gestacion != 'N_A' %}
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle">{{ animal.get_estado_gestacion_display }}</span>
+                            {% endif %}
+                            {% if animal.estado_produccion != 'N_A' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle">{{ animal.get_estado_produccion_display }}</span>
+                            {% endif %}
+                        {% else %}
+                            {% if animal.uso_macho != 'N_A' %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle">{{ animal.get_uso_macho_display }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>{{ animal.rebaño.nombre|default:"<span class='text-muted small'>Automático / Ninguno</span>"|safe }}</td>
+                    <td>{{ animal.fecha_nacimiento|date:"Y-m-d" }}</td>
+                    <td class="text-end pe-4">
+                        <!-- El botón Editar pasa todos los parámetros a la función JS -->
+                        <button class="btn btn-sm btn-outline-primary" title="Editar"
+                                data-bs-toggle="modal" data-bs-target="#modalRegistroAnimal"
+                                onclick="openModalEditarAnimal('{{ animal.id }}', '{{ animal.codigo }}', '{{ animal.nombre }}', '{{ animal.propietario|escapejs|default:'' }}', '{{ animal.fecha_nacimiento|date:'Y-m-d' }}', '{{ animal.sexo }}', '{{ animal.rebaño_id|default:'' }}', '{{ animal.estado_gestacion }}', '{{ animal.estado_produccion }}', '{{ animal.uso_macho }}', '{{ animal.papa.codigo|default:'' }}', '{{ animal.mama.codigo|default:'' }}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                        No se encontraron animales registrados con esos filtros.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Registro/Edición Animal -->
+<div class="modal fade" id="modalRegistroAnimal" tabindex="-1" aria-labelledby="modalRegistroAnimalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalRegistroAnimalLabel"><i class="bi bi-plus-circle me-2"></i>Gestión de Animal</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="animal_id" id="inputAnimalId">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Código</label>
+                            <input type="text" name="codigo" id="inputCodigo" class="form-control" placeholder="Ej: GAN-001" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold">Nombre</label>
+                            <input type="text" name="nombre" id="inputNombre" class="form-control" placeholder="Nombre del animal" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Propietario</label>
+                            <input type="text" name="propietario" id="inputPropietario" class="form-control" placeholder="Ej: Juan Pérez" list="propietariosList">
+                            <datalist id="propietariosList">
+                                {% for p in propietarios_unicos %}
+                                    <option value="{{ p }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Fecha de Nacimiento</label>
+                            <input type="date" name="fecha_nacimiento" id="inputFecha" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Sexo</label>
+                            <select name="sexo" id="selectSexo" class="form-select" required>
+                                <option value="">Seleccione...</option>
+                                <option value="H">Hembra</option>
+                                <option value="M">Macho</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Rebaño Fijo (Opcional)</label>
+                            <select name="rebaño" id="selectRebano" class="form-select">
+                                <option value="">Sin rebaño fijo</option>
+                                {% for r in rebanos %}
+                                    <option value="{{ r.id }}">{{ r.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted" style="font-size: 0.7rem;">(Ignorar si usa Smart Rebaños)</small>
+                        </div>
+                        
+                        <!-- Bloque Hembras -->
+                        <div class="col-12 mt-3" id="bloqueHembras" style="display: none;">
+                            <div class="p-3 bg-danger bg-opacity-10 border border-danger-subtle rounded">
+                                <h6 class="text-danger fw-bold"><i class="bi bi-gender-female me-2"></i>Estados de Hembra</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Estado de Gestación</label>
+                                        <select name="estado_gestacion" id="selectGestacion" class="form-select">
+                                            <option value="N_A">No Aplica / No Definido</option>
+                                            <option value="VACIA">Vacía</option>
+                                            <option value="PREÑADA">Preñada</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Estado de Producción</label>
+                                        <select name="estado_produccion" id="selectProduccion" class="form-select">
+                                            <option value="N_A">No Aplica / No Definido</option>
+                                            <option value="LACTANCIA">En Lactancia</option>
+                                            <option value="SECA">Seca / Horra</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bloque Machos -->
+                        <div class="col-12 mt-3" id="bloqueMachos" style="display: none;">
+                            <div class="p-3 bg-primary bg-opacity-10 border border-primary-subtle rounded">
+                                <h6 class="text-primary fw-bold"><i class="bi bi-gender-male me-2"></i>Uso del Macho</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Propósito</label>
+                                        <select name="uso_macho" id="selectUso" class="form-select">
+                                            <option value="N_A">No Aplica / No Definido</option>
+                                            <option value="REPRODUCTOR">Reproductor (Semental)</option>
+                                            <option value="ENGORDE">Engorde (Sacrificio)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="mt-4 mb-2">
+                        <h6 class="text-muted"><i class="bi bi-diagram-3 me-2"></i>Genealogía (Búsqueda inteligente)</h6>
+                        <div class="alert alert-secondary py-2 small mb-1">
+                            <i class="bi bi-info-circle me-1"></i> Escribe para buscar. Si el animal es de otra finca y no existe, su registro será creado automáticamente.
+                        </div>
+                        
+                        <div class="col-md-6 mt-2 position-relative">
+                            <label class="form-label fw-bold text-primary">Padre (Semental)</label>
+                            <input type="text" name="papa" id="inputPapa" class="form-control border-primary" list="listaPadres" placeholder="Escriba código o nombre..." autocomplete="off">
+                            <datalist id="listaPadres"></datalist>
+                        </div>
+                        <div class="col-md-6 mt-2 position-relative">
+                            <label class="form-label fw-bold text-danger">Madre (Hembra > 3 años)</label>
+                            <input type="text" name="mama" id="inputMama" class="form-control border-danger" list="listaMadres" placeholder="Escriba código o nombre..." autocomplete="off">
+                            <datalist id="listaMadres"></datalist>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="bi bi-save me-2"></i>Guardar Animal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectSexo = document.getElementById('selectSexo');
+    const bloqueHembras = document.getElementById('bloqueHembras');
+    const bloqueMachos = document.getElementById('bloqueMachos');
+
+    selectSexo.addEventListener('change', function() {
+        if(this.value === 'H') {
+            bloqueHembras.style.display = 'block';
+            bloqueMachos.style.display = 'none';
+        } else if (this.value === 'M') {
+            bloqueMachos.style.display = 'block';
+            bloqueHembras.style.display = 'none';
+        } else {
+            bloqueHembras.style.display = 'none';
+            bloqueMachos.style.display = 'none';
+        }
+    });
+    
+    // Funcionalidad Autocomplete (AJAX Fetch)
+    const inputPapa = document.getElementById('inputPapa');
+    const listaPadres = document.getElementById('listaPadres');
+    
+    inputPapa.addEventListener('input', function() {
+        const val = this.value;
+        if(val.length >= 2) {
+            fetch(`/api/buscar_padre/?q=${val}`)
+                .then(res => res.json())
+                .then(data => {
+                    listaPadres.innerHTML = '';
+                    data.results.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.codigo;
+                        option.textContent = item.nombre;
+                        listaPadres.appendChild(option);
+                    });
+                });
+        }
+    });
+
+    const inputMama = document.getElementById('inputMama');
+    const listaMadres = document.getElementById('listaMadres');
+    
+    inputMama.addEventListener('input', function() {
+        const val = this.value;
+        if(val.length >= 2) {
+            fetch(`/api/buscar_madre/?q=${val}`)
+                .then(res => res.json())
+                .then(data => {
+                    listaMadres.innerHTML = '';
+                    data.results.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.codigo;
+                        option.textContent = item.nombre;
+                        listaMadres.appendChild(option);
+                    });
+                });
+        }
+    });
+});
+
+function openModalCrearAnimal() {
+    document.getElementById('inputAnimalId').value = '';
+    document.getElementById('inputCodigo').value = '';
+    document.getElementById('inputNombre').value = '';
+    document.getElementById('inputPropietario').value = '';
+    document.getElementById('inputFecha').value = '';
+    document.getElementById('selectSexo').value = '';
+    document.getElementById('selectRebano').value = '';
+    
+    document.getElementById('selectGestacion').value = 'N_A';
+    document.getElementById('selectProduccion').value = 'N_A';
+    document.getElementById('selectUso').value = 'N_A';
+    
+    document.getElementById('inputPapa').value = '';
+    document.getElementById('inputMama').value = '';
+    
+    document.getElementById('selectSexo').dispatchEvent(new Event('change'));
+}
+
+function openModalEditarAnimal(id, codigo, nombre, propietario, fecha, sexo, rebano_id, gestacion, produccion, uso, papa, mama) {
+    document.getElementById('inputAnimalId').value = id;
+    document.getElementById('inputCodigo').value = codigo;
+    document.getElementById('inputNombre').value = nombre;
+    document.getElementById('inputPropietario').value = propietario;
+    document.getElementById('inputFecha').value = fecha;
+    document.getElementById('selectSexo').value = sexo;
+    
+    // Si rebano_id es vacio o 'None', lo pone vacio
+    document.getElementById('selectRebano').value = rebano_id === 'None' ? '' : rebano_id;
+    
+    document.getElementById('selectGestacion').value = gestacion;
+    document.getElementById('selectProduccion').value = produccion;
+    document.getElementById('selectUso').value = uso;
+    
+    document.getElementById('inputPapa').value = papa === 'None' ? '' : papa;
+    document.getElementById('inputMama').value = mama === 'None' ? '' : mama;
+    
+    document.getElementById('selectSexo').dispatchEvent(new Event('change'));
+}
+</script>
+{% endblock %}

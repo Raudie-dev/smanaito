@@ -1,0 +1,211 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Master Admin | Samanito</title>
+    <link rel="icon" type="image/png" href="{% static 'img/Samanito_logo.png' %}">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'css/paneles-style.css' %}?v={% now 'U' %}">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f4f6f9; }
+        .sidebar { background-color: #212529; min-height: 100vh; color: white; }
+        .card-stats { border: none; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .badge-premium { background: linear-gradient(45deg, #FFD700, #FFA500); color: #000; }
+        .badge-basic { background-color: #4caf50; }
+        .badge-trial { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+
+<div class="d-flex">
+    <!-- Sidebar -->
+    <div class="sidebar p-4" id="sidebar" style="width: 250px;">
+        <div class="d-flex flex-column align-items-center mb-5 text-center">
+            <div class="d-flex align-items-center justify-content-center mb-1">
+                <div class="bg-white rounded-circle d-flex align-items-center justify-content-center me-2 shadow-sm" style="width: 55px; height: 55px; padding: 5px;">
+                    <img src="{% static 'img/Samanito_logo.png' %}" alt="Samanito Logo" class="img-fluid" style="max-height: 40px;">
+                </div>
+                <h4 class="fw-bold mb-0 text-white">Samanito</h4>
+            </div>
+            <span class="badge bg-warning text-dark px-3 mt-1">Master Admin</span>
+        </div>
+        <ul class="nav flex-column gap-3">
+            <li class="nav-item">
+                <a href="#" class="nav-link text-white"><i class="bi bi-people-fill me-2"></i> Clientes (SaaS)</a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'login_admin' %}" class="nav-link text-danger mt-5"><i class="bi bi-box-arrow-left me-2"></i> Salir</a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main content -->
+    <div class="content flex-grow-1 p-5 bg-light" id="content">
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-light d-lg-none me-3" id="sidebarToggle" type="button">
+                    <i class="bi bi-list fs-4"></i>
+                </button>
+                <h3 class="fw-bold mb-0 text-dark">Panel de Control</h3>
+            </div>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <h2 class="fw-bold mb-4" style="font-family: 'Outfit';">Gestión de Clientes (Fincas)</h2>
+
+        <div class="card card-stats mb-4">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle text-nowrap">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Usuario / Finca</th>
+                                <th>Estado de Acceso</th>
+                                <th>Plan</th>
+                                <th>Suscripción</th>
+                                <th>Vencimiento</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cliente in clientes %}
+                            <tr>
+                                <td>#{{ cliente.id }}</td>
+                                <td class="fw-bold">{{ cliente.nombre }}</td>
+                                <td>
+                                    {% if cliente.bloqueado %}
+                                        <span class="badge bg-danger">Bloqueado</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cliente.suscripcion_saas.plan == 'PREMIUM' or cliente.suscripcion_saas.plan == 'VIP' %}
+                                        <span class="badge badge-premium">{{ cliente.suscripcion_saas.plan }}</span>
+                                    {% elif cliente.suscripcion_saas.plan == 'BASICO' %}
+                                        <span class="badge badge-basic">Básico</span>
+                                    {% elif cliente.suscripcion_saas.plan == 'PLUS' %}
+                                        <span class="badge bg-info text-dark">Plus</span>
+                                    {% else %}
+                                        <span class="badge badge-trial">Trial</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if cliente.suscripcion_saas.estado == 'ACTIVA' %}
+                                        <span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Activa</span>
+                                    {% elif cliente.suscripcion_saas.estado == 'VENCIDA' %}
+                                        <span class="text-danger fw-bold"><i class="bi bi-x-circle-fill"></i> Vencida</span>
+                                    {% else %}
+                                        <span class="text-warning fw-bold"><i class="bi bi-exclamation-circle-fill"></i> Suspendida</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ cliente.suscripcion_saas.fecha_vencimiento|date:"d M Y" }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{% url 'toggle_bloqueo' cliente.id %}" class="btn btn-sm {% if cliente.bloqueado %}btn-success{% else %}btn-outline-danger{% endif %}" title="Cambiar Acceso">
+                                            {% if cliente.bloqueado %}
+                                                <i class="bi bi-unlock-fill"></i>
+                                            {% else %}
+                                                <i class="bi bi-lock-fill"></i>
+                                            {% endif %}
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalSuscripcion{{ cliente.id }}">
+                                            <i class="bi bi-pencil-square"></i> Plan
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <div class="modal fade" id="modalSuscripcion{{ cliente.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Editar Suscripción: {{ cliente.nombre }}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="{% url 'editar_suscripcion' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user_id" value="{{ cliente.id }}">
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Plan</label>
+                                                    <select name="plan" class="form-select">
+                                                        <option value="TRIAL" {% if cliente.suscripcion_saas.plan == 'TRIAL' %}selected{% endif %}>Prueba (Trial)</option>
+                                                        <option value="BASICO" {% if cliente.suscripcion_saas.plan == 'BASICO' %}selected{% endif %}>Básico</option>
+                                                        <option value="PLUS" {% if cliente.suscripcion_saas.plan == 'PLUS' %}selected{% endif %}>Plus</option>
+                                                        <option value="PREMIUM" {% if cliente.suscripcion_saas.plan == 'PREMIUM' %}selected{% endif %}>Premium</option>
+                                                        <option value="VIP" {% if cliente.suscripcion_saas.plan == 'VIP' %}selected{% endif %}>VIP</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Estado de Suscripción</label>
+                                                    <select name="estado" class="form-select">
+                                                        <option value="ACTIVA" {% if cliente.suscripcion_saas.estado == 'ACTIVA' %}selected{% endif %}>Activa</option>
+                                                        <option value="VENCIDA" {% if cliente.suscripcion_saas.estado == 'VENCIDA' %}selected{% endif %}>Vencida</option>
+                                                        <option value="SUSPENDIDA" {% if cliente.suscripcion_saas.estado == 'SUSPENDIDA' %}selected{% endif %}>Suspendida</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Fecha de Vencimiento</label>
+                                                    <input type="date" name="fecha_vencimiento" class="form-control" value="{{ cliente.suscripcion_saas.fecha_vencimiento|date:'Y-m-d' }}">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">No hay clientes registrados en el sistema SaaS.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.getElementById('sidebarToggle');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (toggle && sidebar) {
+                toggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('active');
+                    overlay.classList.toggle('active');
+                });
+            }
+            if (overlay) {
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

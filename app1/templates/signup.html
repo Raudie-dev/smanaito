@@ -1,0 +1,159 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro | Samanito</title>
+    <link rel="icon" type="image/png" href="{% static 'img/Samanito_logo.png' %}">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: url('{% static "img/hero_bg.png" %}');
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1;
+        }
+        .register-container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 450px;
+            padding: 15px;
+        }
+        .register-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .register-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .register-header h2 {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            color: #2e7d32;
+        }
+        .form-control {
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.25);
+            border-color: #4caf50;
+        }
+        .btn-register {
+            background: linear-gradient(45deg, #2e7d32, #4caf50);
+            border: none;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 10px;
+            font-weight: 600;
+            width: 100%;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+        .login-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .login-link a {
+            color: #2e7d32;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="register-container">
+    <div class="register-card">
+        <div class="register-header">
+            <img src="{% static 'img/Samanito_logo.png' %}" alt="Samanito Logo" class="mb-3" style="max-height: 80px;">
+            <h2>Crear Cuenta</h2>
+            <p class="text-muted small">Regístrate para obtener 15 días gratis</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" action="{% url 'signup' %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-bold">Correo Electrónico</label>
+                <input type="email" name="email" class="form-control" required placeholder="tu@email.com">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-bold">Nombre de Usuario</label>
+                <input type="text" name="nombre" class="form-control" required placeholder="Ej: jperez">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label text-muted small fw-bold">Contraseña</label>
+                <input type="password" name="password" class="form-control" required placeholder="••••••••">
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label text-muted small fw-bold">Confirmar Contraseña</label>
+                <input type="password" name="password_confirm" class="form-control" required placeholder="••••••••">
+            </div>
+
+            <div class="mb-4 form-check">
+                <input type="checkbox" name="terminos" class="form-check-input" id="terminosCheck" required>
+                <label class="form-check-label text-muted small" for="terminosCheck">
+                    Acepto los Términos y Condiciones
+                </label>
+            </div>
+
+            <button type="submit" class="btn-register">
+                Registrarse <i class="bi bi-arrow-right-circle ms-1"></i>
+            </button>
+        </form>
+
+        <div class="login-link">
+            ¿Ya tienes una cuenta? <a href="{% url 'login' %}">Inicia sesión aquí</a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

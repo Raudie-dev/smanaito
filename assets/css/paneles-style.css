@@ -1,305 +1,211 @@
-        /* Colores para fondos de iconos */
-        .bg-light-blue { background-color: #e3f2fd; }
-        .bg-light-green { background-color: #e8f5e9; }
-        .bg-light-cyan { background-color: #e0f7fa; }
-        .bg-light-red { background-color: #ffebee; }
-
-        /* Mejoras para tarjetas */
-        .card {
-            border: none;
-            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-            transition: all 0.3s ease;
-        }
-
-        .card:hover {
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
-            transform: translateY(-2px);
-        }
-
-        /* Estilos para la actividad reciente */
-        .list-group-item {
-            transition: all 0.2s ease;
-        }
-
-        .list-group-item:hover {
-            background-color: #f8f9fa;
-        }
-
-        /* Ajustes para el gráfico */
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-
-        /* Sidebar */
-        #sidebar-wrapper {
-            min-height: 100vh;
-            margin-left: -15rem;
-            transition: margin 0.25s ease-out;
-        }
-
-        #sidebar-wrapper .sidebar-heading {
-            padding: 0.875rem 1.25rem;
-            font-size: 1.2rem;
-        }
-
-        #wrapper.toggled #sidebar-wrapper {
-            margin-left: 0;
-        }
-
-        @media (min-width: 768px) {
-            #sidebar-wrapper {
-                margin-left: 0;
-            }
-
-            #wrapper.toggled #sidebar-wrapper {
-                margin-left: -15rem;
-            }
-        }
-
 :root {
-    --main-bg-color: #f5f5f5;
-    --sidebar-bg-color: #1b355d;
-    --primary-color: #004c97;
-    --secondary-color: #e9ecef;
-    --text-color: #333;
-    --light-text: #f8f9fa;
-    --border-color: #dee2e6;
-    --success-color: #28a745;
-    --warning-color: #ffc107;
-    --danger-color: #dc3545;
-    --info-color: #17a2b8;
-  }
-  
-  body {
-    background-color: var(--main-bg-color);
-    font-family: "Arial", sans-serif;
-    overflow-x: hidden;
-  }
-  
-  /* Sidebar */
-  #sidebar-wrapper {
-    min-height: 100vh;
-    margin-left: -15rem;
-    transition: margin 0.25s ease-out;
-    background-color: var(--sidebar-bg-color) !important;
-  }
-  
-  #sidebar-wrapper .sidebar-heading {
-    padding: 0.875rem 1.25rem;
-    font-size: 1.2rem;
-  }
-  
-  #sidebar-wrapper .list-group {
-    width: 15rem;
-  }
-  
-  .list-group-item {
-    border: none;
-    padding: 0.75rem 1.25rem;
-  }
-  
-  .list-group-item.active {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border-left: 4px solid #fff;
-  }
-  
-  .list-group-item:hover {
-    background-color: rgba(255, 255, 255, 0.05) !important;
-  }
-  
-  /* Page Content */
-  #page-content-wrapper {
-    min-width: 100vw;
-  }
-  
-  #wrapper.toggled #sidebar-wrapper {
-    margin-left: 0;
-  }
-  
-  .navbar {
-    background-color: #fff;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  }
-  
-  .primary-text {
-    color: var(--primary-color);
-  }
-  
-  .second-text {
-    color: var(--text-color);
-  }
-  
-  .secondary-bg {
-    background-color: var(--secondary-color);
-  }
-  
-  .rounded-full {
-    border-radius: 100%;
-  }
-  
-  /* Cards */
-  .card {
-    border: none;
-    border-radius: 10px;
-    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-  }
-  
-  .card-header {
-    border-radius: 10px 10px 0 0 !important;
-    font-weight: bold;
-  }
-  
-  /* Tables */
-  .table {
-    margin-bottom: 0;
-  }
-  
-  .table-hover tbody tr:hover {
-    background-color: rgba(0, 76, 151, 0.05);
-  }
-  
-  /* Buttons */
-  .btn {
-    border-radius: 5px;
+    --primary-color: #2e7d32;
+    --primary-dark: #1b5e20;
+    --primary-light: #4caf50;
+    --secondary-color: #8d6e63;
+    --accent-color: #fbc02d;
+    --bg-main: #f4f7f6;
+    --sidebar-bg: #1e3b20; /* Verde muy oscuro */
+    --sidebar-hover: #2d5a2f;
+    --text-muted: #a5d6a7;
+    --card-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+body { 
+    display: flex; 
+    min-height: 100vh; 
+    overflow-x: hidden; 
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-main);
+}
+
+/* Sidebar Styles */
+#sidebar { 
+    min-width: 260px; 
+    max-width: 260px; 
+    background: var(--sidebar-bg); 
+    color: white; 
+    transition: all 0.3s;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+}
+
+.sidebar-header {
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding: 20px 15px;
+}
+
+.sidebar-header h4 {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 0;
+    color: var(--accent-color);
+}
+
+#sidebar .nav-link { 
+    color: var(--text-muted); 
+    padding: 12px 20px; 
     font-weight: 500;
-  }
-  
-  .btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-  }
-  
-  .btn-primary:hover {
-    background-color: #003a75;
-    border-color: #003a75;
-  }
-
-  .youtube-alert {
-    background-color: #e7f8fe;
-    border-left: 4px solid #17a2b8;
-    color: #0c5460;
-    padding: 1rem;
-    margin-bottom: 2rem;
-    display: flex;
-    align-items: flex-start;
-    border-radius: 0 4px 4px 0;
-}
-
-.youtube-alert-icon {
-    font-size: 1.5rem;
-    margin-right: 1rem;
-    color: #17a2b8;
-}
-
-.youtube-alert-content {
-    flex: 1;
-}
-
-  
-  /* Login page */
-  .login-bg {
-    background: linear-gradient(171deg, #f7f7f7 0%, #aecae5 100%);
-    height: 100vh;
-  }
-  
-  /* Responsive */
-  @media (min-width: 768px) {
-    #sidebar-wrapper {
-      margin-left: 0;
-    }
-  
-    #page-content-wrapper {
-      min-width: 0;
-      width: 100%;
-    }
-  
-    #wrapper.toggled #sidebar-wrapper {
-      margin-left: -15rem;
-    }
-  }
-  
-  /* Dashboard stats */
-  .border {
-    border: 1px solid var(--border-color) !important;
-  }
-  
-  .border-left-primary {
-    border-left: 0.25rem solid var(--primary-color) !important;
-  }
-  
-  .border-left-success {
-    border-left: 0.25rem solid var(--success-color) !important;
-  }
-  
-  .border-left-info {
-    border-left: 0.25rem solid var(--info-color) !important;
-  }
-  
-  .border-left-warning {
-    border-left: 0.25rem solid var(--warning-color) !important;
-  }
-  
-  /* Charts */
-  canvas {
-    max-height: 300px;
-  }
-  
-  /* Form controls */
-  .form-control:focus,
-  .form-select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.25rem rgba(0, 76, 151, 0.25);
-  }
-  
-  /* Badges */
-  .badge {
-    font-weight: 500;
-    padding: 0.35em 0.65em;
-  }
-  
-  /* Alerts */
-  .alert {
-    border: none;
     border-radius: 8px;
-  }
-  
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: #f1f1f1;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
-  
-        .file-icon {
-            font-size: 1.5rem;
-            color: #6c757d;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-        .file-icon:hover {
-            color: #dc3545;
-            transform: scale(1.1);
-        }
-        .modal-xl {
-            max-width: 90%;
-        }
-        #pdfViewer {
-            width: 100%;
-            height: 70vh;
-            border: 1px solid #dee2e6;
-            border-radius: 0.25rem;
-        }
+    margin-bottom: 5px;
+    transition: all 0.2s ease;
+}
+
+#sidebar .nav-link i {
+    font-size: 1.1rem;
+    vertical-align: middle;
+}
+
+#sidebar .nav-link:hover { 
+    background: var(--sidebar-hover); 
+    color: #fff; 
+    transform: translateX(5px);
+}
+
+#sidebar .nav-link.active { 
+    background: var(--primary-light); 
+    color: white; 
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+#sidebar .nav-item small {
+    color: rgba(255,255,255,0.4) !important;
+    letter-spacing: 1px;
+    padding-left: 20px;
+    display: block;
+    margin-bottom: 8px;
+    margin-top: 15px;
+}
+
+/* Content Area */
+#content { 
+    width: 100%; 
+    background: var(--bg-main);
+}
+
+.navbar { 
+    margin-bottom: 25px; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    background: white !important;
+    padding: 15px 25px;
+}
+
+.navbar-text {
+    font-size: 1.25rem;
+    color: #2c3e50 !important;
+}
+
+/* Cards & Dashboard Elements */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card h5 {
+    color: #555;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.card p.h2 {
+    font-weight: 700;
+    margin-top: 10px;
+}
+
+/* Tables */
+.table {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: var(--sidebar-bg);
+    color: white;
+    font-weight: 500;
+    border: none;
+    padding: 15px;
+}
+
+.table tbody td {
+    padding: 15px;
+    vertical-align: middle;
+    color: #444;
+}
+
+.badge {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+/* Specific Badge Colors */
+.badge.bg-success { background-color: var(--primary-light) !important; }
+.badge.bg-primary { background-color: #2196f3 !important; }
+.badge.bg-warning { background-color: var(--accent-color) !important; color: #333 !important; }
+.badge.bg-danger { background-color: #f44336 !important; }
+
+/* Custom Scrollbar for Sidebar */
+#sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+#sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+}
+
+/* Responsive Design */
+@media (max-width: 991.98px) {
+    #sidebar {
+        margin-left: -260px !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        height: 100dvh !important; /* Dynamic viewport height para PWA */
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        z-index: 1040 !important;
+        transition: margin-left 0.3s ease !important;
+    }
+    
+    #sidebar.active {
+        margin-left: 0 !important;
+    }
+
+    /* Bloquear scroll del body cuando el sidebar está abierto */
+    body.sidebar-open {
+        overflow: hidden !important;
+    }
+
+    #content {
+        width: 100%;
+        margin-left: 0 !important;
+        transition: all 0.3s;
+    }
+    
+    .navbar {
+        padding: 10px 15px;
+    }
+    
+    /* Overlay for mobile */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        background: rgba(0,0,0,0.5);
+        z-index: 1030;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .sidebar-overlay.active {
+        display: block;
+    }
+}
