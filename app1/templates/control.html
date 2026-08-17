@@ -68,12 +68,28 @@
     </div>
 </div>
 
+<!-- Fila del Gráfico de Producción de Leche -->
 <div class="row mt-3">
-    <div class="col-lg-8">
+    <div class="col-12">
         <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-graph-up me-2 text-success"></i>Producción de Leche Diaria (Últimos 7 Días)</h5>
+            </div>
+            <div class="card-body">
+                <div style="height: 250px; position: relative;">
+                    <canvas id="chartProdSemanal"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Tabla de Eventos -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow-sm h-100">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0 flex-wrap gap-3">
                 <h5 class="mb-0 fw-bold text-dark">Últimos Eventos Registrados</h5>
-                <button class="btn btn-sm btn-outline-success">Ver Todos</button>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 text-nowrap">
@@ -104,37 +120,71 @@
         </div>
     </div>
     
-    <div class="col-lg-4">
-        <div class="card shadow-sm bg-success text-white mb-4" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);">
-            <div class="card-body p-4">
-                <h5 class="fw-bold mb-3"><i class="bi bi-cloud-sun"></i> Clima Actual en la Finca</h5>
-                <div class="d-flex align-items-center mb-3">
-                    <h1 class="display-4 fw-bold me-3 mb-0">24°C</h1>
-                    <div>
-                        <p class="mb-0">Soleado con nubes</p>
-                        <small>Humedad: 45%</small>
-                    </div>
+    <!-- Balance Financiero en el Dashboard -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm h-100 bg-dark text-white" style="border-radius: 15px;">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <h6 class="text-uppercase text-secondary fw-bold mb-3" style="font-size: 0.75rem; letter-spacing: 1px;">Balance Financiero Neto</h6>
+                    <h2 class="display-5 fw-bold {% if balance_neto >= 0 %}text-success{% else %}text-danger{% endif %}">${{ balance_neto|floatformat:2 }}</h2>
+                    <p class="text-muted small">Ganancia neta acumulada en la finca actual</p>
                 </div>
-                <hr class="bg-white border-white opacity-25">
-                <div class="d-flex justify-content-between mt-3 text-sm">
-                    <div class="text-center">
-                        <p class="mb-1">Mañana</p>
-                        <i class="bi bi-cloud-rain fs-5"></i>
-                        <p class="mb-0 fw-bold mt-1">21°C</p>
-                    </div>
-                    <div class="text-center">
-                        <p class="mb-1">Jueves</p>
-                        <i class="bi bi-sun fs-5"></i>
-                        <p class="mb-0 fw-bold mt-1">26°C</p>
-                    </div>
-                    <div class="text-center">
-                        <p class="mb-1">Viernes</p>
-                        <i class="bi bi-cloud fs-5"></i>
-                        <p class="mb-0 fw-bold mt-1">23°C</p>
-                    </div>
+                <hr class="border-secondary my-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">Módulo contable activo</span>
+                    <a href="{% url 'finanzas' %}" class="btn btn-sm btn-outline-success">Ver Contabilidad <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('chartProdSemanal').getContext('2d');
+    const labels = {{ dias_leche|safe }};
+    const dataValores = {{ valores_leche|safe }};
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Litros Producidos',
+                data: dataValores,
+                borderColor: '#2e7d32',
+                backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#2e7d32',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        drawBorder: false
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
 {% endblock %}
