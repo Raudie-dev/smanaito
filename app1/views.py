@@ -159,11 +159,29 @@ def control(request):
     hace_7_dias = datetime.date.today() - datetime.timedelta(days=7)
     prod_semanal = RegistroOrdeno.objects.filter(finca_id=finca_activa_id, fecha__gte=hace_7_dias).aggregate(total=Sum('cantidad_litros'))['total'] or 0
     
+    # Producción de leche diaria de los últimos 7 días para gráfico
+    dias_leche = []
+    valores_leche = []
+    hoy = datetime.date.today()
+    for i in range(6, -1, -1):
+        dia = hoy - datetime.timedelta(days=i)
+        dias_leche.append(dia.strftime("%d %b"))
+        cant = RegistroOrdeno.objects.filter(finca_id=finca_activa_id, fecha=dia).aggregate(total=Sum('cantidad_litros'))['total'] or 0
+        valores_leche.append(float(cant))
+        
     # 3. Alertas Destete
     umbral_destete = datetime.date.today() - datetime.timedelta(days=config.meses_destete * 30)
     alertas_destete_count = Animal.objects.filter(finca_id=finca_activa_id, destetado=False, fecha_nacimiento__lte=umbral_destete).count() if config.usar_destete else 0
     
-    # 4. Últimos Eventos
+    # 4. Indicadores Financieros Rápidos
+    precio_leche_config, _ = PrecioLecheConfig.objects.get_or_create(finca_id=finca_activa_id, defaults={'precio_por_litro': 0.00})
+    litros_totales = RegistroOrdeno.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('cantidad_litros'))['total'] or 0
+    ingresos_leche = float(litros_totales) * float(precio_leche_config.precio_por_litro)
+    ingresos_animales = VentaAnimal.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('precio_total'))['total'] or 0
+    egresos_totales = GastoFinca.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('monto'))['total'] or 0
+    balance_neto = (ingresos_leche + float(ingresos_animales)) - float(egresos_totales)
+
+    # 5. Últimos Eventos
     eventos = []
     
     ultimos_ordenos = RegistroOrdeno.objects.filter(finca_id=finca_activa_id).order_by('-fecha', '-hora_finalizacion')[:3]
@@ -192,6 +210,9 @@ def control(request):
         'total_hembras': total_hembras,
         'prod_semanal': prod_semanal,
         'alertas_destete_count': alertas_destete_count,
+        'balance_neto': balance_neto,
+        'dias_leche': dias_leche,
+        'valores_leche': valores_leche,
         'eventos': eventos[:6],
         'config': config,
         'fincas_usuario': fincas_usuario,
