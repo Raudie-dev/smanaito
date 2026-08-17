@@ -20,6 +20,7 @@ urlpatterns = [
     path('sanidad/incidentes/', views.incidentes, name='incidentes'),
     path('finanzas/', views.finanzas, name='finanzas'),
     path('auditoria/', views.auditoria, name='auditoria'),
+    path('perfil/', views.perfil, name='perfil'),
     
     # Endpoints API
     path('api/buscar_padre/', views.api_buscar_padre, name='api_buscar_padre'),

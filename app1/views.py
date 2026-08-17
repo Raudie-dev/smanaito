@@ -1284,3 +1284,74 @@ def auditoria(request):
         'q': q,
     }
     return render(request, 'auditoria.html', context)
+
+def perfil(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        messages.error(request, 'Debe iniciar sesión primero')
+        return redirect('login')
+        
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    
+    # Obtener suscripción de app2
+    suscripcion = None
+    try:
+        from app2.models import Suscripcion
+        suscripcion, _ = Suscripcion.objects.get_or_create(usuario=user)
+    except Exception:
+        pass
+        
+    config, _ = ConfiguracionUsuario.objects.get_or_create(user=user)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'actualizar_datos':
+            nombre = request.POST.get('nombre')
+            email = request.POST.get('email')
+            
+            if User.objects.exclude(id=user.id).filter(nombre=nombre).exists():
+                messages.error(request, 'El nombre de usuario ya está en uso')
+            elif email and User.objects.exclude(id=user.id).filter(email=email).exists():
+                messages.error(request, 'El correo electrónico ya está en uso')
+            else:
+                user.nombre = nombre
+                user.email = email
+                user.save()
+                registrar_log(user, finca_activa_id, 'MODIFICACION', 'SEGURIDAD', f"Actualizó sus datos básicos de cuenta (Nombre: {nombre})")
+                messages.success(request, 'Datos de cuenta actualizados correctamente')
+                
+        elif action == 'cambiar_password':
+            current_pw = request.POST.get('current_password')
+            new_pw = request.POST.get('new_password')
+            confirm_pw = request.POST.get('confirm_password')
+            
+            if not check_password(current_pw, user.password) and not (not user.password.startswith('pbkdf2_') and user.password == current_pw):
+                messages.error(request, 'La contraseña actual es incorrecta')
+            elif new_pw != confirm_pw:
+                messages.error(request, 'La nueva contraseña y su confirmación no coinciden')
+            else:
+                user.password = make_password(new_pw)
+                user.save()
+                registrar_log(user, finca_activa_id, 'MODIFICACION', 'SEGURIDAD', "Actualizó su contraseña de acceso")
+                messages.success(request, 'Contraseña cambiada correctamente')
+                
+        elif action == 'guardar_config':
+            config.usar_mamanto = 'usar_mamanto' in request.POST
+            config.usar_destete = 'usar_destete' in request.POST
+            config.meses_mamanto = int(request.POST.get('meses_mamanto', 3))
+            config.meses_destete = int(request.POST.get('meses_destete', 7))
+            config.save()
+            registrar_log(user, finca_activa_id, 'CONFIGURACION', 'SEGURIDAD', "Modificó los parámetros de crianza y destete")
+            messages.success(request, 'Configuración de crianza guardada')
+            
+        return redirect('perfil')
+        
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'user_profile': user,
+        'suscripcion': suscripcion,
+        'config': config,
+    }
+    return render(request, 'perfil.html', context)
