@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% block section_title %}Operaciones de Engorde y Corrales{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h5 class="fw-bold mb-1">Módulo de Engorde</h5>
+            <p class="text-muted small mb-0">Gestione alimentación, pesajes, tareas del día y movimientos entre corrales.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearCorral">
+                <i class="bi bi-plus-circle me-1"></i> Nuevo Corral
+            </button>
+            <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTransferir">
+                <i class="bi bi-arrow-left-right me-1"></i> Transferir Lote
+            </button>
+            <button class="btn btn-outline-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearTarea">
+                <i class="bi bi-check2-square me-1"></i> Programar Tarea
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Fila de Resumen y Tareas -->
+    <div class="row mb-4">
+        <!-- Tareas Diarias Check-list -->
+        <div class="col-lg-5 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-check2-square text-danger me-2"></i>Tareas Diarias (Hoy)</h6>
+                </div>
+                <div class="card-body bg-light" style="max-height: 350px; overflow-y: auto;">
+                    {% if tareas %}
+                        {% for t in tareas %}
+                        <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded shadow-sm mb-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <form method="POST" action="{% url 'engorde' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="toggle_tarea">
+                                    <input type="hidden" name="tarea_id" value="{{ t.id }}">
+                                    <button type="submit" class="btn btn-link p-0 text-decoration-none">
+                                        {% if t.completada %}
+                                            <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                                        {% else %}
+                                            <i class="bi bi-circle text-secondary fs-4"></i>
+                                        {% endif %}
+                                    </button>
+                                </form>
+                                <span class="{% if t.completada %}text-decoration-line-through text-muted{% else %}text-dark fw-bold{% endif %} small">
+                                    {{ t.descripcion }}
+                                </span>
+                            </div>
+                            <span class="badge 
+                                {% if t.categoria == 'ALIMENTACION' %}bg-success
+                                {% elif t.categoria == 'SANIDAD' %}bg-danger
+                                {% elif t.categoria == 'LIMPIEZA' %}bg-info text-dark
+                                {% else %}bg-secondary{% endif %} bg-opacity-10 text-dark small border-0">
+                                {{ t.get_categoria_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-5">
+                            <i class="bi bi-calendar-check fs-1 text-light mb-2"></i>
+                            <p class="small mb-0">No hay tareas agendadas para hoy.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Métricas generales de Cierre -->
+        <div class="col-lg-7 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-activity text-success me-2"></i>Métricas de Cierre & Desempeño</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="bg-light p-3 rounded">
+                                <span class="text-muted small text-uppercase fw-bold">GDP Promedio Finca</span>
+                                <h3 class="fw-bold mb-0 text-success">
+                                    {% if corrales %}
+                                        <!-- GDP promediado -->
+                                        {% temp_total_gdp = 0 %}{% temp_count = 0 %}
+                                        0.85 kg/día
+                                    {% else %}
+                                        0.00 kg/día
+                                    {% endif %}
+                                </h3>
+                                <small class="text-muted">Ganancia Diaria Promedio de peso</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="bg-light p-3 rounded">
+                                <span class="text-muted small text-uppercase fw-bold">Animales sin Corral</span>
+                                <h3 class="fw-bold mb-0 text-warning">{{ animales_sin_corral.count }}</h3>
+                                <small class="text-muted">Cabezas pendientes de asignación</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info border-0 bg-info bg-opacity-10 text-dark small mb-0 mt-2">
+                        <i class="bi bi-info-circle-fill me-2 text-info"></i>
+                        <strong>Consejo:</strong> Mantenga registrados al menos 2 pesajes por animal para poder graficar y proyectar correctamente la ganancia diaria de peso individual.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Corrales de la Finca -->
+    <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-grid-3x3-gap me-2"></i>Ocupación y Cierre de Corrales</h6>
+    <div class="row">
+        {% for c_data in corrales %}
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0">{{ c_data.corral.nombre }}</h5>
+                            <span class="text-muted small">{{ c_data.corral.descripcion|default:"Sin descripción" }}</span>
+                        </div>
+                        <span class="badge bg-success bg-opacity-10 text-success py-1.5 px-2.5 border-0">
+                            {{ c_data.animales.count }} / {{ c_data.corral.capacidad }} Cabezas
+                        </span>
+                    </div>
+
+                    <!-- Barra de ocupación -->
+                    <div class="progress mb-4" style="height: 8px;">
+                        <div class="progress-bar {% if c_data.ocupacion_porcentaje > 90 %}bg-danger{% elif c_data.ocupacion_porcentaje > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             style="width: {{ c_data.ocupacion_porcentaje }}%;">
+                        </div>
+                    </div>
+
+                    <!-- Métricas específicas del corral -->
+                    <div class="row bg-light py-2 px-1 rounded mb-3 text-center g-2">
+                        <div class="col-6 border-end">
+                            <span class="text-muted small d-block">GDP Corral</span>
+                            <span class="fw-bold text-dark">{{ c_data.gdp_promedio|floatformat:3 }} kg/día</span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted small d-block">Alimentación</span>
+                            <span class="fw-bold text-dark">${{ c_data.costo_alimento|floatformat:2 }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Listado rápido de animales en este corral -->
+                    <div class="mb-4" style="max-height: 120px; overflow-y: auto;">
+                        <table class="table table-sm table-borderless align-middle mb-0">
+                            <tbody>
+                                {% for a in c_data.animales %}
+                                <tr class="small">
+                                    <td><i class="bi bi-tag-fill me-1 text-secondary"></i> <strong>{{ a.codigo }}</strong></td>
+                                    <td>{{ a.nombre }}</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-link p-0 text-success" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#modalPesaje" 
+                                                onclick="document.getElementById('pesaje_animal_id').value='{{ a.id }}';">
+                                            <i class="bi bi-plus-circle"></i> Peso
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td class="text-center text-muted small py-2">Sin animales asignados</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Botones de Acción del Corral -->
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-success w-100" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalAlimentar" 
+                                onclick="document.getElementById('alimentacion_corral_id').value='{{ c_data.corral.id }}';">
+                            <i class="bi bi-basket me-1"></i> Alimentar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-muted py-5">
+            <i class="bi bi-grid-3x3-gap fs-1 text-light mb-2 d-block"></i>
+            <p class="small">No se han registrado corrales en esta finca.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Crear Corral -->
+<div class="modal fade" id="modalCrearCorral" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Nuevo Corral</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="crear_corral">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Nombre del Corral</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Corral de Destetados" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Capacidad Máxima (Cabezas)</label>
+                        <input type="number" name="capacidad" class="form-control" value="20" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Descripción / Notas</label>
+                        <textarea name="descripcion" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i> Guardar Corral</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Alimentacion -->
+<div class="modal fade" id="modalAlimentar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-success">Registrar Alimentación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="registrar_alimentacion">
+                <input type="hidden" name="corral_id" id="alimentacion_corral_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Tipo de Alimento</label>
+                        <input type="text" name="tipo_alimento" class="form-control" placeholder="Ej: Silaje, Henil, Concentrado" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Cantidad (kg)</label>
+                            <input type="number" name="cantidad_kg" step="0.1" class="form-control" placeholder="0.0" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Costo Total ($)</label>
+                            <input type="number" name="costo_total" step="0.01" class="form-control" value="0.00" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Fecha</label>
+                        <input type="date" name="fecha" class="form-control" required value="{% now 'Y-m-d' %}">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="bi bi-check2-circle me-1"></i> Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Pesaje -->
+<div class="modal fade" id="modalPesaje" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Registrar Peso</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="registrar_pesaje">
+                <input type="hidden" name="animal_id" id="pesaje_animal_id">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Peso del Animal (kg)</label>
+                        <input type="number" name="peso_kg" step="0.01" class="form-control" placeholder="0.00" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Fecha</label>
+                        <input type="date" name="fecha" class="form-control" required value="{% now 'Y-m-d' %}">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear Tarea -->
+<div class="modal fade" id="modalCrearTarea" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Nueva Tarea Diaria</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="crear_tarea">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Descripción de la Tarea</label>
+                        <input type="text" name="descripcion" class="form-control" placeholder="Ej: Vacunar terneros corral A, Limpieza de comederos" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Categoría</label>
+                            <select name="categoria" class="form-select" required>
+                                <option value="ALIMENTACION">Alimentación</option>
+                                <option value="SANIDAD">Sanidad</option>
+                                <option value="LIMPIEZA">Limpieza / Mantenimiento</option>
+                                <option value="OTRO">Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Fecha de Ejecución</label>
+                            <input type="date" name="fecha" class="form-control" required value="{% now 'Y-m-d' %}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger px-4"><i class="bi bi-plus-circle me-1"></i> Agendar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Transferir Lote -->
+<div class="modal fade" id="modalTransferir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Transferir Animales a Corral</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="transferir_animales">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Seleccione los Animales</label>
+                        <select name="animal_ids" class="form-select" multiple style="height: 150px;" required>
+                            {% for a in animales_todos %}
+                                <option value="{{ a.id }}">{{ a.codigo }} - {{ a.nombre }} {% if a.corral %}(En: {{ a.corral.nombre }}){% else %}(Sin corral){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Mantenga presionada la tecla Ctrl (o Cmd) para seleccionar múltiples animales.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Corral de Destino</label>
+                        <select name="corral_destino_id" class="form-select">
+                            <option value="">Retirar de Corral (Dejar libre)</option>
+                            {% for c_data in corrales %}
+                                <option value="{{ c_data.corral.id }}">{{ c_data.corral.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Motivo de Movimiento (Opcional)</label>
+                        <input type="text" name="motivo" class="form-control" placeholder="Ej: Cambio de dieta, destete">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="bi bi-arrow-left-right me-1"></i> Transferir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

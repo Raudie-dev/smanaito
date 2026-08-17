@@ -5,7 +5,7 @@ from django.db.models import Q, Sum
 from django.http import JsonResponse, HttpResponse
 import datetime
 import openpyxl
-from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig, LogActividad
+from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia
 
 def registrar_log(usuario, finca_id, accion, modulo, descripcion):
     try:
@@ -1355,3 +1355,154 @@ def perfil(request):
         'config': config,
     }
     return render(request, 'perfil.html', context)
+
+def engorde(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        messages.error(request, 'Debe iniciar sesión primero')
+        return redirect('login')
+        
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        messages.error(request, 'Debe crear una finca primero')
+        return redirect('control')
+        
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'crear_corral':
+            nombre = request.POST.get('nombre')
+            capacidad = request.POST.get('capacidad', 20)
+            desc = request.POST.get('descripcion', '')
+            try:
+                Corral.objects.create(finca_id=finca_activa_id, nombre=nombre, capacidad=capacidad, descripcion=desc)
+                registrar_log(user, finca_activa_id, 'CREACION', 'REBAÑOS', f"Creó corral: '{nombre}' con capacidad para {capacidad} animales")
+                messages.success(request, 'Corral creado correctamente')
+            except Exception as e:
+                messages.error(request, f'Error al crear corral: {str(e)}')
+                
+        elif action == 'registrar_alimentacion':
+            corral_id = request.POST.get('corral_id')
+            alimento = request.POST.get('tipo_alimento')
+            cantidad = request.POST.get('cantidad_kg')
+            costo = request.POST.get('costo_total', 0.00)
+            fecha = request.POST.get('fecha')
+            try:
+                corral = Corral.objects.get(id=corral_id, finca_id=finca_activa_id)
+                RegistroAlimentacion.objects.create(
+                    finca_id=finca_activa_id,
+                    corral=corral,
+                    fecha=fecha,
+                    tipo_alimento=alimento,
+                    cantidad_kg=cantidad,
+                    costo_total=costo
+                )
+                registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f"Registró alimentación en corral '{corral.nombre}': {cantidad}kg de {alimento} por ${costo}")
+                messages.success(request, 'Alimentación registrada con éxito')
+            except Exception as e:
+                messages.error(request, f'Error al registrar alimentación: {str(e)}')
+                
+        elif action == 'registrar_pesaje':
+            animal_id = request.POST.get('animal_id')
+            peso = request.POST.get('peso_kg')
+            fecha = request.POST.get('fecha')
+            try:
+                animal = Animal.objects.get(id=animal_id, finca_id=finca_activa_id)
+                PesajeAnimal.objects.create(animal=animal, fecha=fecha, peso_kg=peso)
+                registrar_log(user, finca_activa_id, 'CREACION', 'ANIMALES', f"Registró pesaje para el animal {animal.codigo}: {peso}kg")
+                messages.success(request, f'Pesaje de {peso}kg registrado para el animal {animal.codigo}')
+            except Exception as e:
+                messages.error(request, f'Error al registrar pesaje: {str(e)}')
+                
+        elif action == 'crear_tarea':
+            desc = request.POST.get('descripcion')
+            cat = request.POST.get('categoria', 'OTRO')
+            fecha = request.POST.get('fecha')
+            try:
+                TareaDiaria.objects.create(finca_id=finca_activa_id, fecha=fecha, descripcion=desc, categoria=cat)
+                messages.success(request, 'Tarea diaria programada')
+            except Exception as e:
+                messages.error(request, f'Error al crear tarea: {str(e)}')
+                
+        elif action == 'toggle_tarea':
+            tarea_id = request.POST.get('tarea_id')
+            try:
+                tarea = TareaDiaria.objects.get(id=tarea_id, finca_id=finca_activa_id)
+                tarea.completada = not tarea.completada
+                tarea.save()
+                messages.success(request, 'Estado de la tarea actualizado')
+            except Exception as e:
+                messages.error(request, f'Error al actualizar tarea: {str(e)}')
+                
+        elif action == 'transferir_animales':
+            destino_id = request.POST.get('corral_destino_id')
+            animal_ids = request.POST.getlist('animal_ids')
+            motivo = request.POST.get('motivo', '')
+            try:
+                destino = Corral.objects.get(id=destino_id, finca_id=finca_activa_id) if destino_id else None
+                for a_id in animal_ids:
+                    animal = Animal.objects.get(id=a_id, finca_id=finca_activa_id)
+                    origen = animal.corral
+                    animal.corral = destino
+                    animal.save()
+                    HistorialTransferencia.objects.create(
+                        animal=animal,
+                        corral_origen=origen,
+                        corral_destino=destino,
+                        motivo=motivo
+                    )
+                dest_nombre = destino.nombre if destino else 'Ninguno'
+                registrar_log(user, finca_activa_id, 'MODIFICACION', 'REBAÑOS', f"Transfirió {len(animal_ids)} animal(es) al corral '{dest_nombre}'")
+                messages.success(request, 'Animales transferidos correctamente')
+            except Exception as e:
+                messages.error(request, f'Error en transferencia: {str(e)}')
+                
+        return redirect('engorde')
+        
+    # GET
+    corrales_list = Corral.objects.filter(finca_id=finca_activa_id)
+    corrales_data = []
+    
+    for c in corrales_list:
+        animales = c.animales.filter(estado_vida='VIVO')
+        
+        # Calcular GDP (Ganancia Diaria Promedio) del corral
+        total_gdp = 0.0
+        con_gdp = 0
+        for a in animales:
+            pesajes = a.pesajes.all().order_by('fecha')
+            if pesajes.count() >= 2:
+                p_primero = pesajes.first()
+                p_ultimo = pesajes.last()
+                dias = (p_ultimo.fecha - p_primero.fecha).days
+                if dias > 0:
+                    gdp = float(p_ultimo.peso_kg - p_primero.peso_kg) / dias
+                    total_gdp += gdp
+                    con_gdp += 1
+                    
+        gdp_promedio = total_gdp / con_gdp if con_gdp > 0 else 0.0
+        costo_alimento = RegistroAlimentacion.objects.filter(corral=c).aggregate(total=Sum('costo_total'))['total'] or 0
+        
+        corrales_data.append({
+            'corral': c,
+            'animales': animales,
+            'gdp_promedio': gdp_promedio,
+            'costo_alimento': costo_alimento,
+            'ocupacion_porcentaje': (animales.count() / c.capacidad * 100) if c.capacidad > 0 else 0,
+        })
+        
+    animales_sin_corral = Animal.objects.filter(finca_id=finca_activa_id, estado_vida='VIVO', corral__isnull=True)
+    animales_todos = Animal.objects.filter(finca_id=finca_activa_id, estado_vida='VIVO')
+    
+    hoy = datetime.date.today()
+    tareas_pendientes = TareaDiaria.objects.filter(finca_id=finca_activa_id, fecha=hoy).order_by('completada')
+    
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'corrales': corrales_data,
+        'animales_sin_corral': animales_sin_corral,
+        'animales_todos': animales_todos,
+        'tareas': tareas_pendientes,
+    }
+    return render(request, 'engorde.html', context)
