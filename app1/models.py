@@ -113,6 +113,11 @@ class Animal(models.Model):
         ('VENDIDO', 'Vendido'),
         ('FALLECIDO', 'Fallecido'),
     ]
+    SALUD_CHOICES = [
+        ('SANO', 'Sano'),
+        ('TRATAMIENTO', 'En Tratamiento'),
+        ('HOSPITAL', 'Hospitalizado / Aislado'),
+    ]
     
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
     finca = models.ForeignKey(Finca, on_delete=models.CASCADE, null=True, blank=True)
@@ -130,6 +135,8 @@ class Animal(models.Model):
     estado_produccion = models.CharField(max_length=20, choices=PRODUCCION_CHOICES, default='N_A')
     uso_macho = models.CharField(max_length=20, choices=USO_CHOICES, default='N_A')
     destetado = models.BooleanField(default=False, help_text="Indica si el animal ya fue destetado")
+    estado_salud = models.CharField(max_length=20, choices=SALUD_CHOICES, default='SANO')
+    caravana_electronica = models.CharField(max_length=100, null=True, blank=True, unique=True, help_text="RFID / Caravana Electrónica")
     
     papa = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='hijos_padre')
     mama = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='hijos_madre')
@@ -290,6 +297,7 @@ class Corral(models.Model):
     nombre = models.CharField(max_length=100)
     capacidad = models.IntegerField(default=20)
     descripcion = models.TextField(blank=True, null=True)
+    es_hospital = models.BooleanField(default=False)
 
     def count_animales(self):
         return self.animales.filter(estado_vida='VIVO').count()
@@ -341,3 +349,14 @@ class HistorialTransferencia(models.Model):
 
     def __str__(self):
         return f"{self.animal.codigo} | {self.corral_origen} -> {self.corral_destino} el {self.fecha}"
+
+class ProtocoloTratamiento(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='protocolos')
+    nombre = models.CharField(max_length=150)
+    diagnostico_asociado = models.CharField(max_length=200, help_text="Diagnóstico por defecto")
+    medicamento = models.CharField(max_length=200, help_text="Medicamento sugerido")
+    dosis = models.CharField(max_length=100, help_text="Dosis recomendada, ej: 10ml, 1 tableta")
+    duracion_dias = models.IntegerField(default=3, help_text="Duración en días")
+
+    def __str__(self):
+        return f"{self.nombre} (Tratamiento: {self.medicamento})"
