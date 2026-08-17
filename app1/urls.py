@@ -18,6 +18,7 @@ urlpatterns = [
     path('ventas/', views.ventas, name='ventas'),
     path('sanidad/vacunacion/', views.vacunacion, name='vacunacion'),
     path('sanidad/incidentes/', views.incidentes, name='incidentes'),
+    path('finanzas/', views.finanzas, name='finanzas'),
     
     # Endpoints API
     path('api/buscar_padre/', views.api_buscar_padre, name='api_buscar_padre'),

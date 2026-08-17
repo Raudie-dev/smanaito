@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% block section_title %}Finanzas de Finca{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h5 class="fw-bold mb-1">Contabilidad y Balance</h5>
+            <p class="text-muted small mb-0">Control de gastos e ingresos generados automáticamente.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarGasto">
+                <i class="bi bi-plus-circle me-1"></i> Registrar Gasto
+            </button>
+            <button class="btn btn-outline-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPrecioLeche">
+                <i class="bi bi-gear me-1"></i> Configurar Leche
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Tarjetas de Balance -->
+    <div class="row mb-4">
+        <!-- Ingresos de Leche -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-success border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Ingreso por Leche</span>
+                        <i class="bi bi-droplet-half text-success fs-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">${{ ingresos_leche|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0">Basado en {{ litros_totales }} litros a ${{ precio_leche_config.precio_por_litro }}/L</p>
+                </div>
+            </div>
+        </div>
+        <!-- Ingresos de Animales -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-info border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Venta de Animales</span>
+                        <i class="bi bi-piggy-bank text-info fs-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">${{ ingresos_animales|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0">Total acumulado en ventas de carne/cría</p>
+                </div>
+            </div>
+        </div>
+        <!-- Egresos Totales -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-danger border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Gastos Totales</span>
+                        <i class="bi bi-cart-dash text-danger fs-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">${{ egresos_totales|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0">Egresos fijos y variables registrados</p>
+                </div>
+            </div>
+        </div>
+        <!-- Balance Neto -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start {% if balance_neto >= 0 %}border-primary{% else %}border-warning{% endif %} border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Balance Neto</span>
+                        <i class="bi bi-wallet2 {% if balance_neto >= 0 %}text-primary{% else %}text-warning{% endif %} fs-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1 {% if balance_neto >= 0 %}text-primary{% else %}text-danger{% endif %}">${{ balance_neto|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0">Balance de rentabilidad actual</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficas y Configuración -->
+    <div class="row mb-4">
+        <!-- Gráfico de Gastos por Categoría -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2 text-primary"></i>Distribución de Egresos</h6>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="chartGastos"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Desglose Rápido -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-list-stars me-2 text-success"></i>Resumen de Ingresos</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <div>
+                                <span class="fw-bold d-block">Producción Lechera</span>
+                                <small class="text-muted">Ingreso total proyectado</small>
+                            </div>
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold">${{ ingresos_leche|floatformat:2 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <div>
+                                <span class="fw-bold d-block">Ventas de Ganado</span>
+                                <small class="text-muted">Transacciones de venta cerradas</small>
+                            </div>
+                            <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-2 fw-bold">${{ ingresos_animales|floatformat:2 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom-0">
+                            <div>
+                                <span class="fw-bold d-block">Ingresos Totales</span>
+                                <small class="text-muted">Suma de todas las ganancias</small>
+                            </div>
+                            <span class="fs-5 fw-bold text-dark">${{ ingresos_totales|floatformat:2 }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de Egresos -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-receipt me-2 text-danger"></i>Historial de Egresos Registrados</h6>
+            <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir Reporte
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted small text-uppercase">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Categoría</th>
+                            <th>Tipo</th>
+                            <th>Monto</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in gastos %}
+                        <tr>
+                            <td class="small">{{ g.fecha|date:"d/m/Y" }}</td>
+                            <td class="fw-bold">{{ g.concepto }}</td>
+                            <td><span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle">{{ g.get_categoria_display }}</span></td>
+                            <td><span class="badge {% if g.tipo == 'FIJO' %}bg-primary{% else %}bg-warning text-dark{% endif %} bg-opacity-10 rounded-pill px-2.5">{{ g.get_tipo_display }}</span></td>
+                            <td class="fw-bold text-danger">-${{ g.monto|floatformat:2 }}</td>
+                            <td class="text-end">
+                                <form method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="eliminar_gasto">
+                                    <input type="hidden" name="gasto_id" value="{{ g.id }}">
+                                    <button type="submit" class="btn btn-sm btn-light text-danger" onclick="return confirm('¿Eliminar este gasto?');">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No se han registrado egresos todavía.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Gasto -->
+<div class="modal fade" id="modalRegistrarGasto" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Registrar Gasto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="registrar_gasto">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Concepto</label>
+                        <input type="text" name="concepto" class="form-control" placeholder="Ej: Compra de Concentrado, Pago Luz" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Monto ($)</label>
+                            <input type="number" name="monto" step="0.01" min="0.01" class="form-control" placeholder="0.00" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Fecha</label>
+                            <input type="date" name="fecha" class="form-control" required value="{% now 'Y-m-d' %}">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Categoría</label>
+                            <select name="categoria" class="form-select" required>
+                                <option value="ALIMENTO">Alimento / Suplementos</option>
+                                <option value="VETERINARIA">Medicina / Veterinaria</option>
+                                <option value="PERSONAL">Sueldos / Personal</option>
+                                <option value="SERVICIOS">Servicios Públicos</option>
+                                <option value="MANTENIMIENTO">Mantenimiento</option>
+                                <option value="OTRO">Otros Gastos</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Tipo de Gasto</label>
+                            <select name="tipo" class="form-select" required>
+                                <option value="VARIABLE">Gasto Variable</option>
+                                <option value="FIJO">Gasto Fijo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i> Guardar Gasto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Configurar Precio Leche -->
+<div class="modal fade" id="modalPrecioLeche" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Precio del Litro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="configurar_leche">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Precio por Litro de Leche ($)</label>
+                        <input type="number" name="precio_por_litro" step="0.01" min="0.00" class="form-control" value="{{ precio_leche_config.precio_por_litro }}" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="bi bi-check-circle me-1"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('chartGastos').getContext('2d');
+    const dataGastos = {{ chart_gastos|safe }};
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Alimento', 'Veterinaria', 'Personal', 'Servicios', 'Mantenimiento', 'Otros'],
+            datasets: [{
+                label: 'Gastos por Categoría ($)',
+                data: dataGastos,
+                backgroundColor: [
+                    '#4caf50',
+                    '#2196f3',
+                    '#ff9800',
+                    '#e91e63',
+                    '#9c27b0',
+                    '#607d8b'
+                ],
+                borderWidth: 0,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        drawBorder: false
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

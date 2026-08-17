@@ -103,6 +103,15 @@
                     </a>
                 </li>
             </li>
+            
+            <li class="nav-item mt-2">
+                <small class="text-uppercase fw-bold mt-4 mb-2 d-block ps-3 text-primary" style="font-size: 0.75rem; letter-spacing: 1px;">Contabilidad</small>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'finanzas' %}active{% endif %}" href="{% url 'finanzas' %}">
+                        <i class="bi bi-cash-stack me-2"></i> Finanzas de Finca
+                    </a>
+                </li>
+            </li>
         </ul>
         
         <hr>
