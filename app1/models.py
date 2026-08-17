@@ -133,6 +133,7 @@ class Animal(models.Model):
     
     papa = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='hijos_padre')
     mama = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='hijos_madre')
+    corral = models.ForeignKey('Corral', on_delete=models.SET_NULL, null=True, blank=True, related_name='animales')
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
@@ -283,3 +284,60 @@ class LogActividad(models.Model):
     
     def __str__(self):
         return f"{self.fecha_hora.strftime('%d/%m/%Y %H:%M')} | {self.usuario.nombre} | {self.modulo} - {self.accion}"
+
+class Corral(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='corrales')
+    nombre = models.CharField(max_length=100)
+    capacidad = models.IntegerField(default=20)
+    descripcion = models.TextField(blank=True, null=True)
+
+    def count_animales(self):
+        return self.animales.filter(estado_vida='VIVO').count()
+
+    def __str__(self):
+        return f"{self.nombre} (Capacidad: {self.count_animales()}/{self.capacidad})"
+
+class PesajeAnimal(models.Model):
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='pesajes')
+    fecha = models.DateField()
+    peso_kg = models.DecimalField(max_digits=6, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.animal.codigo} - {self.fecha} - {self.peso_kg}kg"
+
+class RegistroAlimentacion(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='alimentaciones')
+    corral = models.ForeignKey(Corral, on_delete=models.CASCADE, related_name='alimentaciones')
+    fecha = models.DateField()
+    tipo_alimento = models.CharField(max_length=150)
+    cantidad_kg = models.DecimalField(max_digits=8, decimal_places=2)
+    costo_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    def __str__(self):
+        return f"{self.corral.nombre} - {self.fecha} - {self.tipo_alimento} ({self.cantidad_kg}kg)"
+
+class TareaDiaria(models.Model):
+    CATEGORIA_CHOICES = [
+        ('ALIMENTACION', 'Alimentación'),
+        ('SANIDAD', 'Sanidad'),
+        ('LIMPIEZA', 'Limpieza / Mantenimiento'),
+        ('OTRO', 'Otro'),
+    ]
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='tareas')
+    fecha = models.DateField()
+    descripcion = models.TextField()
+    categoria = models.CharField(max_length=50, choices=CATEGORIA_CHOICES, default='OTRO')
+    completada = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.fecha} - {self.descripcion[:30]} ({'Completada' if self.completada else 'Pendiente'})"
+
+class HistorialTransferencia(models.Model):
+    animal = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='transferencias')
+    corral_origen = models.ForeignKey(Corral, on_delete=models.SET_NULL, null=True, blank=True, related_name='transferencias_origen')
+    corral_destino = models.ForeignKey(Corral, on_delete=models.SET_NULL, null=True, blank=True, related_name='transferencias_destino')
+    fecha = models.DateTimeField(auto_now_add=True)
+    motivo = models.CharField(max_length=200, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.animal.codigo} | {self.corral_origen} -> {self.corral_destino} el {self.fecha}"

@@ -21,6 +21,7 @@ urlpatterns = [
     path('finanzas/', views.finanzas, name='finanzas'),
     path('auditoria/', views.auditoria, name='auditoria'),
     path('perfil/', views.perfil, name='perfil'),
+    path('engorde/', views.engorde, name='engorde'),
     
     # Endpoints API
     path('api/buscar_padre/', views.api_buscar_padre, name='api_buscar_padre'),
