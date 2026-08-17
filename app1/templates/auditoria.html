@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block section_title %}Auditoría del Sistema{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h5 class="fw-bold mb-1">Historial de Auditoría</h5>
+            <p class="text-muted small mb-0">Listado de todos los movimientos y actividades registrados en la finca.</p>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm shadow-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Imprimir Logs
+        </button>
+    </div>
+
+    <!-- Zona de Filtros -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-funnel me-2 text-primary"></i>Filtrar Movimientos</h6>
+        </div>
+        <div class="card-body bg-light">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label text-muted small fw-bold">Módulo</label>
+                    <select name="modulo" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Todos los Módulos</option>
+                        <option value="ANIMALES" {% if modulo_filtro == 'ANIMALES' %}selected{% endif %}>Animales</option>
+                        <option value="REBAÑOS" {% if modulo_filtro == 'REBAÑOS' %}selected{% endif %}>Rebaños</option>
+                        <option value="ORDEÑO" {% if modulo_filtro == 'ORDEÑO' %}selected{% endif %}>Control de Ordeño</option>
+                        <option value="SANIDAD" {% if modulo_filtro == 'SANIDAD' %}selected{% endif %}>Sanidad</option>
+                        <option value="VENTAS" {% if modulo_filtro == 'VENTAS' %}selected{% endif %}>Ventas</option>
+                        <option value="FINANZAS" {% if modulo_filtro == 'FINANZAS' %}selected{% endif %}>Finanzas</option>
+                        <option value="SEGURIDAD" {% if modulo_filtro == 'SEGURIDAD' %}selected{% endif %}>Seguridad</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-muted small fw-bold">Acción</label>
+                    <select name="accion" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Todas las Acciones</option>
+                        <option value="CREACION" {% if accion_filtro == 'CREACION' %}selected{% endif %}>Creación / Registro</option>
+                        <option value="MODIFICACION" {% if accion_filtro == 'MODIFICACION' %}selected{% endif %}>Modificación</option>
+                        <option value="ELIMINACION" {% if accion_filtro == 'ELIMINACION' %}selected{% endif %}>Eliminación</option>
+                        <option value="LOGIN" {% if accion_filtro == 'LOGIN' %}selected{% endif %}>Inicios de Sesión</option>
+                        <option value="IMPORTACION" {% if accion_filtro == 'IMPORTACION' %}selected{% endif %}>Importación Masiva</option>
+                        <option value="CONFIGURACION" {% if accion_filtro == 'CONFIGURACION' %}selected{% endif %}>Configuración</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold">Buscar por texto</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="q" class="form-control" placeholder="Buscar en la descripción..." value="{{ q|default:'' }}">
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{% url 'auditoria' %}" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-eraser"></i> Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Historial de Logs -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted small text-uppercase">
+                        <tr>
+                            <th class="ps-4">Fecha y Hora</th>
+                            <th>Usuario</th>
+                            <th>Módulo</th>
+                            <th>Acción</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td class="ps-4 small text-muted">{{ log.fecha_hora|date:"d/m/Y H:i:s" }}</td>
+                            <td class="fw-bold">{{ log.usuario.nombre }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if log.modulo == 'ANIMALES' %}bg-primary
+                                    {% elif log.modulo == 'ORDEÑO' %}bg-success
+                                    {% elif log.modulo == 'SANIDAD' %}bg-danger
+                                    {% elif log.modulo == 'VENTAS' %}bg-info text-dark
+                                    {% elif log.modulo == 'FINANZAS' %}bg-warning text-dark
+                                    {% else %}bg-secondary{% endif %} bg-opacity-10 text-dark border-0">
+                                    {{ log.get_modulo_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if log.accion == 'CREACION' %}text-success
+                                    {% elif log.accion == 'ELIMINACION' %}text-danger
+                                    {% elif log.accion == 'MODIFICACION' %}text-warning
+                                    {% else %}text-secondary{% endif %} bg-transparent border-0 fw-bold">
+                                    {{ log.get_accion_display }}
+                                </span>
+                            </td>
+                            <td class="small">{{ log.descripcion }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No se encontraron movimientos registrados con los filtros aplicados.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
