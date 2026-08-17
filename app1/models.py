@@ -221,3 +221,35 @@ class IncidenteSanitario(models.Model):
     
     def __str__(self):
         return f"{self.animal.codigo} - {self.diagnostico}"
+
+class GastoFinca(models.Model):
+    CATEGORIA_CHOICES = [
+        ('ALIMENTO', 'Alimento / Suplementos'),
+        ('VETERINARIA', 'Medicina / Veterinaria'),
+        ('PERSONAL', 'Sueldos / Personal'),
+        ('SERVICIOS', 'Servicios Públicos (Luz, Agua)'),
+        ('MANTENIMIENTO', 'Mantenimiento / Infraestructura'),
+        ('OTRO', 'Otros Gastos'),
+    ]
+    TIPO_CHOICES = [
+        ('FIJO', 'Gasto Fijo'),
+        ('VARIABLE', 'Gasto Variable'),
+    ]
+    
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    fecha = models.DateField()
+    categoria = models.CharField(max_length=50, choices=CATEGORIA_CHOICES)
+    concepto = models.CharField(max_length=200)
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='VARIABLE')
+    
+    def __str__(self):
+        return f"{self.concepto} - {self.monto}"
+
+class PrecioLecheConfig(models.Model):
+    finca = models.OneToOneField(Finca, on_delete=models.CASCADE, related_name='precio_leche_config')
+    precio_por_litro = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+    
+    def __str__(self):
+        return f"Precio Leche Finca {self.finca.nombre}: {self.precio_por_litro}"

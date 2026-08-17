@@ -5,7 +5,7 @@ from django.db.models import Q, Sum
 from django.http import JsonResponse, HttpResponse
 import datetime
 import openpyxl
-from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario
+from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig
 
 def login(request):
     if request.method == 'POST':
@@ -1103,3 +1103,97 @@ def exportar_reporte_excel(request):
     response['Content-Disposition'] = 'attachment; filename="reporte_animales.xlsx"'
     wb.save(response)
     return response
+
+def finanzas(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        messages.error(request, 'Debe iniciar sesión primero')
+        return redirect('login')
+        
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        messages.error(request, 'Debe crear una finca primero')
+        return redirect('control')
+        
+    precio_leche_config, _ = PrecioLecheConfig.objects.get_or_create(
+        finca_id=finca_activa_id,
+        defaults={'precio_por_litro': 0.00}
+    )
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'registrar_gasto':
+            concepto = request.POST.get('concepto')
+            monto = request.POST.get('monto')
+            categoria = request.POST.get('categoria')
+            tipo = request.POST.get('tipo', 'VARIABLE')
+            fecha = request.POST.get('fecha')
+            
+            try:
+                GastoFinca.objects.create(
+                    usuario=user,
+                    finca_id=finca_activa_id,
+                    concepto=concepto,
+                    monto=monto,
+                    categoria=categoria,
+                    tipo=tipo,
+                    fecha=fecha
+                )
+                messages.success(request, 'Gasto registrado correctamente')
+            except Exception as e:
+                messages.error(request, f'Error al registrar gasto: {str(e)}')
+                
+        elif action == 'configurar_leche':
+            precio = request.POST.get('precio_por_litro')
+            try:
+                precio_leche_config.precio_por_litro = precio
+                precio_leche_config.save()
+                messages.success(request, 'Precio del litro de leche actualizado')
+            except Exception as e:
+                messages.error(request, f'Error al actualizar precio: {str(e)}')
+                
+        elif action == 'eliminar_gasto':
+            gasto_id = request.POST.get('gasto_id')
+            try:
+                gasto = GastoFinca.objects.get(id=gasto_id, finca_id=finca_activa_id)
+                gasto.delete()
+                messages.success(request, 'Gasto eliminado')
+            except Exception as e:
+                messages.error(request, f'Error al eliminar: {str(e)}')
+                
+        return redirect('finanzas')
+        
+    # Cálculos Financieros
+    litros_totales = RegistroOrdeno.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('cantidad_litros'))['total'] or 0
+    ingresos_leche = float(litros_totales) * float(precio_leche_config.precio_por_litro)
+    
+    ingresos_animales = VentaAnimal.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('precio_total'))['total'] or 0
+    
+    egresos_totales = GastoFinca.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('monto'))['total'] or 0
+    
+    ingresos_totales = float(ingresos_leche) + float(ingresos_animales)
+    balance_neto = ingresos_totales - float(egresos_totales)
+    
+    gastos = GastoFinca.objects.filter(finca_id=finca_activa_id).order_by('-fecha')
+    
+    # Datos para gráficos de gastos por categoría
+    categorias = ['ALIMENTO', 'VETERINARIA', 'PERSONAL', 'SERVICIOS', 'MANTENIMIENTO', 'OTRO']
+    chart_gastos = []
+    for c in categorias:
+        total_cat = GastoFinca.objects.filter(finca_id=finca_activa_id, categoria=c).aggregate(total=Sum('monto'))['total'] or 0
+        chart_gastos.append(float(total_cat))
+        
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'precio_leche_config': precio_leche_config,
+        'litros_totales': litros_totales,
+        'ingresos_leche': ingresos_leche,
+        'ingresos_animales': ingresos_animales,
+        'ingresos_totales': ingresos_totales,
+        'egresos_totales': egresos_totales,
+        'balance_neto': balance_neto,
+        'gastos': gastos,
+        'chart_gastos': chart_gastos,
+    }
+    return render(request, 'finanzas.html', context)
