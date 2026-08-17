@@ -5,7 +5,7 @@ from django.db.models import Q, Sum
 from django.http import JsonResponse, HttpResponse
 import datetime
 import openpyxl
-from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia
+from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento
 
 def registrar_log(usuario, finca_id, accion, modulo, descripcion):
     try:
@@ -1506,3 +1506,221 @@ def engorde(request):
         'tareas': tareas_pendientes,
     }
     return render(request, 'engorde.html', context)
+
+import json
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def manga_manejo(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.path.startswith('/api/'):
+            return JsonResponse({'error': 'No autorizado'}, status=401)
+        messages.error(request, 'Debe iniciar sesión primero')
+        return redirect('login')
+        
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'No hay finca activa'}, status=400)
+        messages.error(request, 'Debe crear una finca primero')
+        return redirect('control')
+
+    # AJAX: Buscar animal por RFID o Código
+    if request.GET.get('ajax') == 'buscar_animal':
+        query = request.GET.get('term', '').strip()
+        animal = Animal.objects.filter(
+            Q(codigo=query) | Q(caravana_electronica=query) | Q(nombre__icontains=query),
+            finca_id=finca_activa_id,
+            estado_vida='VIVO'
+        ).first()
+        if animal:
+            return JsonResponse({
+                'success': True,
+                'id': animal.id,
+                'codigo': animal.codigo,
+                'nombre': animal.nombre,
+                'caravana': animal.caravana_electronica or 'Sin asignar',
+                'estado_salud': animal.get_estado_salud_display(),
+                'estado_salud_raw': animal.estado_salud,
+                'corral': animal.corral.nombre if animal.corral else 'Sin corral',
+                'sexo': animal.get_sexo_display(),
+                'edad': (datetime.date.today() - animal.fecha_nacimiento).days // 30,
+            })
+        return JsonResponse({'success': False, 'message': 'Animal no encontrado'})
+
+    # AJAX: Obtener protocolo
+    if request.GET.get('ajax') == 'get_protocolo':
+        proto_id = request.GET.get('id')
+        try:
+            proto = ProtocoloTratamiento.objects.get(id=proto_id, finca_id=finca_activa_id)
+            return JsonResponse({
+                'success': True,
+                'diagnostico': proto.diagnostico_asociado,
+                'medicamento': proto.medicamento,
+                'dosis': proto.dosis,
+                'duracion': proto.duracion_dias
+            })
+        except ProtocoloTratamiento.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Protocolo no encontrado'})
+
+    # POST
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        # Procesar sincronización offline desde AJAX
+        if action == 'sincronizar_offline' or request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body)
+                acciones = data.get('acciones', [])
+                sincronizados = 0
+                
+                for acc in acciones:
+                    tipo = acc.get('tipo')
+                    fecha_acc = acc.get('fecha', datetime.date.today().strftime('%Y-%m-%d'))
+                    
+                    if tipo == 'tratamiento':
+                        codigo = acc.get('codigo_animal')
+                        diag = acc.get('diagnostico')
+                        med = acc.get('medicamento')
+                        dosis = acc.get('dosis')
+                        hosp = acc.get('hospitalizar', False)
+                        
+                        animal = Animal.objects.filter(codigo=codigo, finca_id=finca_activa_id, estado_vida='VIVO').first()
+                        if animal:
+                            IncidenteSanitario.objects.create(
+                                usuario=user,
+                                finca_id=finca_activa_id,
+                                animal=animal,
+                                fecha_incidente=fecha_acc,
+                                tipo='ENFERMEDAD',
+                                diagnostico=diag,
+                                tratamiento=f"{med} - Dosis: {dosis}",
+                                estado='RESUELTO' if not hosp else 'PENDIENTE'
+                            )
+                            if hosp:
+                                corral_hosp = Corral.objects.filter(finca_id=finca_activa_id, es_hospital=True).first()
+                                if corral_hosp:
+                                    animal.corral = corral_hosp
+                                animal.estado_salud = 'HOSPITAL'
+                            else:
+                                animal.estado_salud = 'TRATAMIENTO'
+                            animal.save()
+                            sincronizados += 1
+                            
+                    elif tipo == 'pesaje':
+                        codigo = acc.get('codigo_animal')
+                        peso = acc.get('peso_kg')
+                        animal = Animal.objects.filter(codigo=codigo, finca_id=finca_activa_id, estado_vida='VIVO').first()
+                        if animal:
+                            PesajeAnimal.objects.create(animal=animal, fecha=fecha_acc, peso_kg=peso)
+                            sincronizados += 1
+                            
+                if sincronizados > 0:
+                    registrar_log(user, finca_activa_id, 'IMPORTACION', 'SANIDAD', f"Sincronizó de forma offline {sincronizados} actividades sanitarias/pesajes")
+                return JsonResponse({'success': True, 'sincronizados': sincronizados})
+            except Exception as e:
+                return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+        # POST Normal de Formularios
+        if action == 'crear_protocolo':
+            nombre = request.POST.get('nombre')
+            diag = request.POST.get('diagnostico')
+            med = request.POST.get('medicamento')
+            dosis = request.POST.get('dosis')
+            duracion = request.POST.get('duracion_dias', 3)
+            try:
+                ProtocoloTratamiento.objects.create(
+                    finca_id=finca_activa_id,
+                    nombre=nombre,
+                    diagnostico_asociado=diag,
+                    medicamento=med,
+                    dosis=dosis,
+                    duracion_dias=duracion
+                )
+                messages.success(request, f"Protocolo '{nombre}' creado correctamente.")
+            except Exception as e:
+                messages.error(request, f"Error al crear protocolo: {str(e)}")
+                
+        elif action == 'aplicar_tratamiento':
+            animal_id = request.POST.get('animal_id')
+            diag = request.POST.get('diagnostico')
+            med = request.POST.get('medicamento')
+            dosis = request.POST.get('dosis')
+            hosp = 'hospitalizar' in request.POST
+            
+            try:
+                animal = Animal.objects.get(id=animal_id, finca_id=finca_activa_id)
+                IncidenteSanitario.objects.create(
+                    usuario=user,
+                    finca_id=finca_activa_id,
+                    animal=animal,
+                    fecha_incidente=datetime.date.today(),
+                    tipo='ENFERMEDAD',
+                    diagnostico=diag,
+                    tratamiento=f"{med} - Dosis: {dosis}",
+                    estado='PENDIENTE' if hosp else 'RESUELTO'
+                )
+                
+                if hosp:
+                    corral_hosp = Corral.objects.filter(finca_id=finca_activa_id, es_hospital=True).first()
+                    if corral_hosp:
+                        animal.corral = corral_hosp
+                    animal.estado_salud = 'HOSPITAL'
+                else:
+                    animal.estado_salud = 'TRATAMIENTO'
+                animal.save()
+                
+                registrar_log(user, finca_activa_id, 'CREACION', 'SANIDAD', f"Aplicó tratamiento a {animal.codigo}: {diag} ({med})")
+                messages.success(request, f"Tratamiento registrado correctamente para {animal.nombre}.")
+            except Exception as e:
+                messages.error(request, f"Error al aplicar tratamiento: {str(e)}")
+                
+        elif action == 'alta_medica':
+            animal_id = request.POST.get('animal_id')
+            nuevo_corral_id = request.POST.get('nuevo_corral_id')
+            try:
+                animal = Animal.objects.get(id=animal_id, finca_id=finca_activa_id)
+                animal.estado_salud = 'SANO'
+                if nuevo_corral_id:
+                    animal.corral = Corral.objects.get(id=nuevo_corral_id, finca_id=finca_activa_id)
+                animal.save()
+                
+                # Marcar incidentes pendientes como resueltos
+                IncidenteSanitario.objects.filter(animal=animal, estado='PENDIENTE').update(estado='RESUELTO')
+                
+                registrar_log(user, finca_activa_id, 'MODIFICACION', 'SANIDAD', f"Dio de alta médica al animal {animal.codigo}")
+                messages.success(request, f"Se dio de alta médica al animal {animal.codigo}.")
+            except Exception as e:
+                messages.error(request, f"Error: {str(e)}")
+                
+        return redirect('manga')
+
+    # GET
+    protocolos = ProtocoloTratamiento.objects.filter(finca_id=finca_activa_id)
+    hospitalizados = Animal.objects.filter(finca_id=finca_activa_id, estado_vida='VIVO', estado_salud='HOSPITAL')
+    en_tratamiento = Animal.objects.filter(finca_id=finca_activa_id, estado_vida='VIVO', estado_salud='TRATAMIENTO')
+    corrales = Corral.objects.filter(finca_id=finca_activa_id)
+    corrales_comunes = corrales.filter(es_hospital=False)
+    
+    # Comprobar si hay corral hospital, si no hay, crearlo automáticamente
+    corral_hospital = corrales.filter(es_hospital=True).first()
+    if not corral_hospital:
+        corral_hospital = Corral.objects.create(
+            finca_id=finca_activa_id,
+            nombre="Corral Hospital / Aislamiento",
+            capacidad=15,
+            es_hospital=True,
+            descripcion="Corral destinado al tratamiento y recuperación de animales enfermos."
+        )
+        
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'protocolos': protocolos,
+        'hospitalizados': hospitalizados,
+        'en_tratamiento': en_tratamiento,
+        'corrales_comunes': corrales_comunes,
+        'corral_hospital': corral_hospital,
+    }
+    return render(request, 'manga.html', context)

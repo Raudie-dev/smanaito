@@ -107,6 +107,11 @@
                         <i class="bi bi-heartbreak me-2"></i> Incidentes Clínicos
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'manga' %}active{% endif %}" href="{% url 'manga' %}">
+                        <i class="bi bi-phone me-2"></i> Manga & Sanidad
+                    </a>
+                </li>
             </li>
             
             <li class="nav-item mt-2">

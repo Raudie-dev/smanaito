@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+{% block section_title %}Manga de Trabajo y Sanidad Animal{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h5 class="fw-bold mb-1"><i class="bi bi-activity text-danger me-2"></i>Mesa / Manga de Trabajo</h5>
+            <p class="text-muted small mb-0">Identifique animales por Caravana Electrónica (RFID) o código, aplique tratamientos y gestione el Hospital Animal.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearProtocolo">
+                <i class="bi bi-plus-circle me-1"></i> Crear Protocolo Vet
+            </button>
+            <div id="status-conexion" class="badge bg-success bg-opacity-10 text-success py-2 px-3 border border-success d-flex align-items-center gap-2">
+                <span class="spinner-grow spinner-grow-sm text-success" role="status" style="width: 8px; height: 8px;"></span>
+                <span>En Línea (Internet)</span>
+            </div>
+            <button id="btn-sincronizar-offline" class="btn btn-warning btn-sm shadow-sm d-none" onclick="sincronizarColaOffline()">
+                <i class="bi bi-cloud-upload me-1"></i> Sincronizar Cola (<span id="count-offline">0</span>)
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Fila Superior: Escáner / Buscador y Registro de Manga -->
+    <div class="row mb-4">
+        <!-- Escáner RFID Mobile-First -->
+        <div class="col-lg-6 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-upc-scan text-primary me-2"></i>Escáner de Caravanas / Buscador</h6>
+                </div>
+                <div class="card-body">
+                    <div class="input-group input-group-lg mb-3">
+                        <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" id="rfid-input" class="form-control bg-light border-start-0" placeholder="Escanee chip RFID o digite código..." autofocus>
+                    </div>
+                    <div class="alert alert-secondary border-0 bg-light text-dark small mb-0 py-2">
+                        <i class="bi bi-info-circle-fill me-2 text-secondary"></i>
+                        Pase el lector de Caravanas Electrónicas por el chip del animal o digite su código y presione Enter para cargarlo.
+                    </div>
+
+                    <!-- Ficha del Animal Cargado -->
+                    <div id="ficha-animal" class="d-none mt-4 p-3 bg-white rounded border border-light shadow-sm">
+                        <div class="d-flex justify-content-between align-items-start border-bottom pb-2 mb-3">
+                            <div>
+                                <h4 class="fw-bold text-primary mb-0" id="anim-codigo">--</h4>
+                                <span class="text-muted small" id="anim-nombre">Nombre</span>
+                            </div>
+                            <span class="badge bg-success" id="anim-salud-badge">SANO</span>
+                        </div>
+                        <div class="row g-2 small mb-3">
+                            <div class="col-6"><strong>RFID:</strong> <span id="anim-rfid">--</span></div>
+                            <div class="col-6"><strong>Ubicación:</strong> <span id="anim-corral">--</span></div>
+                            <div class="col-6"><strong>Sexo:</strong> <span id="anim-sexo">--</span></div>
+                            <div class="col-6"><strong>Edad:</strong> <span id="anim-edad">--</span> meses</div>
+                        </div>
+
+                        <!-- Acciones Rápidas sobre la Manga -->
+                        <div class="nav nav-tabs mb-3" id="manga-tab" role="tablist">
+                            <button class="nav-link active py-2 small" id="tab-tratar" data-bs-toggle="tab" data-bs-target="#panel-tratar" type="button">Tratar Animal</button>
+                            <button class="nav-link py-2 small" id="tab-pesaje" data-bs-toggle="tab" data-bs-target="#panel-pesaje" type="button">Peso Rápido</button>
+                        </div>
+                        <div class="tab-content">
+                            <!-- Tratar Animal -->
+                            <div class="tab-pane fade show active" id="panel-tratar">
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted fw-bold">Protocolos Veterinarios</label>
+                                    <select id="select-protocolo" class="form-select form-select-sm" onchange="aplicarProtocolo(this.value)">
+                                        <option value="">-- Autocompletar con un Protocolo --</option>
+                                        {% for p in protocolos %}
+                                            <option value="{{ p.id }}">{{ p.nombre }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <form method="POST" id="form-tratamiento">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="aplicar_treatment_web">
+                                    <input type="hidden" name="animal_id" id="hidden-animal-id">
+                                    <div class="mb-2">
+                                        <label class="form-label small text-muted">Diagnóstico Clínico</label>
+                                        <input type="text" name="diagnostico" id="input-diag" class="form-control form-control-sm" required>
+                                    </div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label small text-muted">Medicamento</label>
+                                            <input type="text" name="medicamento" id="input-med" class="form-control form-control-sm" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small text-muted">Dosis</label>
+                                            <input type="text" name="dosis" id="input-dosis" class="form-control form-control-sm" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" name="hospitalizar" id="input-hospitalizar">
+                                        <label class="form-check-label small text-muted fw-bold" for="input-hospitalizar">Apartar al Corral Hospital (Aislamiento)</label>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-outline-success w-100" onclick="guardarAccionManga('tratamiento')"><i class="bi bi-save"></i> Guardar en Cola</button>
+                                        <button type="submit" class="btn btn-sm btn-success w-100" id="btn-enviar-online"><i class="bi bi-check2-circle"></i> Aplicar Online</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <!-- Peso Rápido -->
+                            <div class="tab-pane fade" id="panel-pesaje">
+                                <form id="form-pesaje-manga">
+                                    <div class="mb-3">
+                                        <label class="form-label small text-muted">Peso Registrado (kg)</label>
+                                        <input type="number" step="0.01" id="input-peso-manga" class="form-control form-control-lg text-center fw-bold" required placeholder="0.00">
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="guardarAccionManga('pesaje')"><i class="bi bi-save"></i> Guardar en Cola</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hospital Animal y Aparte Sanitario -->
+        <div class="col-lg-6 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold text-danger"><i class="bi bi-heart-pulse me-2"></i>Hospital Animal & Apartes</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger bg-danger bg-opacity-10 border-0 text-dark small mb-3">
+                        <i class="bi bi-hospital-fill me-2 text-danger"></i>
+                        <strong>Hospital Finca Activo:</strong> {{ corral_hospital.nombre }} ({{ hospitalizados.count }} Cabezas hospitalizadas).
+                    </div>
+                    
+                    <h6 class="fw-bold small border-bottom pb-2 mb-2">Animales en Aislamiento / Hospital</h6>
+                    <div style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm table-hover align-middle mb-0 small">
+                            <thead>
+                                <tr class="text-muted">
+                                    <th>Animal</th>
+                                    <th>Estado Clínico</th>
+                                    <th class="text-end">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in hospitalizados %}
+                                <tr>
+                                    <td><strong>{{ a.codigo }}</strong> - {{ a.nombre }}</td>
+                                    <td><span class="badge bg-danger bg-opacity-10 text-danger border-0">Hospitalizado</span></td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-success btn-xs" data-bs-toggle="modal" data-bs-target="#modalAlta" onclick="document.getElementById('alta_animal_id').value='{{ a.id }}';">
+                                            Alta Médica
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="3" class="text-center text-muted py-3">No hay animales hospitalizados de momento.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear Protocolo -->
+<div class="modal fade" id="modalCrearProtocolo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-primary">Nuevo Protocolo de Tratamiento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="crear_protocolo">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Nombre del Protocolo</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Protocolo Mastitis, Desparasitación Anual" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Diagnóstico por Defecto</label>
+                        <input type="text" name="diagnostico" class="form-control" placeholder="Ej: Inflamación de Ubre, Infección digestiva" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Medicamento Sugerido</label>
+                            <input type="text" name="medicamento" class="form-control" placeholder="Ej: Penicilina, Ivermectina" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Dosis Recomendada</label>
+                            <input type="text" name="dosis" class="form-control" placeholder="Ej: 10ml, 5 tabletas" required>
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label text-muted small">Duración del Tratamiento (Días)</label>
+                        <input type="number" name="duracion_dias" class="form-control" value="3" min="1">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i> Guardar Protocolo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Alta Médica -->
+<div class="modal fade" id="modalAlta" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-success">Dar Alta Médica</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="alta_medica">
+                <input type="hidden" name="animal_id" id="alta_animal_id">
+                <div class="modal-body">
+                    <p class="small text-muted">El animal será marcado como **Sano** y se resolverán sus incidentes clínicos pendientes.</p>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Reubicar en Corral</label>
+                        <select name="nuevo_corral_id" class="form-select form-select-sm" required>
+                            {% for c in corrales_comunes %}
+                                <option value="{{ c.id }}">{{ c.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="bi bi-check2-circle me-1"></i> Registrar Alta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Monitorizar la conexión a Internet
+    window.addEventListener('online', actualizarEstadoConexion);
+    window.addEventListener('offline', actualizarEstadoConexion);
+
+    function actualizarEstadoConexion() {
+        const badge = document.getElementById('status-conexion');
+        if (navigator.onLine) {
+            badge.className = "badge bg-success bg-opacity-10 text-success py-2 px-3 border border-success d-flex align-items-center gap-2";
+            badge.innerHTML = `<span class="spinner-grow spinner-grow-sm text-success" role="status" style="width: 8px; height: 8px;"></span><span>En Línea (Internet)</span>`;
+            document.getElementById('btn-enviar-online').disabled = false;
+            comprobarColaOffline();
+        } else {
+            badge.className = "badge bg-danger bg-opacity-10 text-danger py-2 px-3 border border-danger d-flex align-items-center gap-2";
+            badge.innerHTML = `<span class="bi bi-wifi-off fs-6"></span><span>Modo Offline (Sin Internet)</span>`;
+            document.getElementById('btn-enviar-online').disabled = true;
+        }
+    }
+
+    // Buscar Animal en Manga
+    document.getElementById('rfid-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const query = this.value.trim();
+            if (query) {
+                buscarAnimalEnManga(query);
+            }
+        }
+    });
+
+    function buscarAnimalEnManga(term) {
+        fetch(`?ajax=buscar_animal&term=${term}`)
+            .then(res => res.json())
+            .then(data => {
+                const ficha = document.getElementById('ficha-animal');
+                if (data.success) {
+                    document.getElementById('hidden-animal-id').value = data.id;
+                    document.getElementById('anim-codigo').innerText = data.codigo;
+                    document.getElementById('anim-nombre').innerText = data.nombre;
+                    document.getElementById('anim-rfid').innerText = data.caravana;
+                    document.getElementById('anim-corral').innerText = data.corral;
+                    document.getElementById('anim-sexo').innerText = data.sexo;
+                    document.getElementById('anim-edad').innerText = data.edad;
+                    
+                    const badge = document.getElementById('anim-salud-badge');
+                    badge.innerText = data.estado_salud;
+                    if (data.estado_salud_raw === 'HOSPITAL') {
+                        badge.className = "badge bg-danger";
+                    } else if (data.estado_salud_raw === 'TRATAMIENTO') {
+                        badge.className = "badge bg-warning text-dark";
+                    } else {
+                        badge.className = "badge bg-success";
+                    }
+                    
+                    ficha.classList.remove('d-none');
+                } else {
+                    alert('Animal no encontrado en la base de datos de la finca.');
+                    ficha.classList.add('d-none');
+                }
+            });
+    }
+
+    // Cargar protocolo
+    function aplicarProtocolo(protoId) {
+        if (!protoId) return;
+        fetch(`?ajax=get_protocolo&id=${protoId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('input-diag').value = data.diagnostico;
+                    document.getElementById('input-med').value = data.medicamento;
+                    document.getElementById('input-dosis').value = data.dosis;
+                }
+            });
+    }
+
+    // Lógica Offline (LocalStorage)
+    function guardarAccionManga(tipo) {
+        const codigo = document.getElementById('anim-codigo').innerText;
+        if (codigo === '--') {
+            alert('Cargue un animal primero.');
+            return;
+        }
+
+        let accion = {
+            tipo: tipo,
+            codigo_animal: codigo,
+            fecha: new Date().toISOString().split('T')[0]
+        };
+
+        if (tipo === 'tratamiento') {
+            accion.diagnostico = document.getElementById('input-diag').value;
+            accion.medicamento = document.getElementById('input-med').value;
+            accion.dosis = document.getElementById('input-dosis').value;
+            accion.hospitalizar = document.getElementById('input-hospitalizar').checked;
+            
+            if (!accion.diagnostico || !accion.medicamento || !accion.dosis) {
+                alert('Complete todos los campos del tratamiento.');
+                return;
+            }
+        } else if (tipo === 'pesaje') {
+            accion.peso_kg = document.getElementById('input-peso-manga').value;
+            if (!accion.peso_kg) {
+                alert('Digite un peso válido.');
+                return;
+            }
+        }
+
+        let cola = JSON.parse(localStorage.getItem('cola_manga_offline')) || [];
+        cola.push(accion);
+        localStorage.setItem('cola_manga_offline', JSON.stringify(cola));
+
+        alert('Acción agendada en la cola de trabajo local (Offline).');
+        document.getElementById('rfid-input').value = '';
+        document.getElementById('ficha-animal').classList.add('d-none');
+        
+        comprobarColaOffline();
+    }
+
+    function comprobarColaOffline() {
+        const cola = JSON.parse(localStorage.getItem('cola_manga_offline')) || [];
+        const btnSinc = document.getElementById('btn-sincronizar-offline');
+        const countSpan = document.getElementById('count-offline');
+        
+        if (cola.length > 0 && navigator.onLine) {
+            btnSinc.classList.remove('d-none');
+            countSpan.innerText = cola.length;
+        } else {
+            btnSinc.classList.add('d-none');
+        }
+    }
+
+    function sincronizarColaOffline() {
+        const cola = JSON.parse(localStorage.getItem('cola_manga_offline')) || [];
+        if (cola.length === 0) return;
+
+        fetch('', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                action: 'sincronizar_offline',
+                acciones: cola
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Sincronización exitosa. Se guardaron ${data.sincronizados} actividades.`);
+                localStorage.removeItem('cola_manga_offline');
+                comprobarColaOffline();
+                location.reload();
+            } else {
+                alert('Error al sincronizar cola: ' + data.error);
+            }
+        });
+    }
+
+    // Inicializar estados
+    actualizarEstadoConexion();
+    comprobarColaOffline();
+</script>
+{% endblock %}
