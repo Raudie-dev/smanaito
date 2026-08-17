@@ -253,3 +253,33 @@ class PrecioLecheConfig(models.Model):
     
     def __str__(self):
         return f"Precio Leche Finca {self.finca.nombre}: {self.precio_por_litro}"
+
+class LogActividad(models.Model):
+    ACCION_CHOICES = [
+        ('CREACION', 'Creación / Registro'),
+        ('MODIFICACION', 'Modificación / Actualización'),
+        ('ELIMINACION', 'Eliminación'),
+        ('LOGIN', 'Inicio de Sesión'),
+        ('IMPORTACION', 'Importación Masiva'),
+        ('CONFIGURACION', 'Cambio de Configuración'),
+    ]
+    
+    MODULO_CHOICES = [
+        ('ANIMALES', 'Animales'),
+        ('REBAÑOS', 'Rebaños'),
+        ('ORDEÑO', 'Control de Ordeño'),
+        ('SANIDAD', 'Sanidad'),
+        ('VENTAS', 'Ventas'),
+        ('FINANZAS', 'Finanzas'),
+        ('SEGURIDAD', 'Seguridad / Acceso'),
+    ]
+    
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, null=True, blank=True)
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+    accion = models.CharField(max_length=50, choices=ACCION_CHOICES)
+    modulo = models.CharField(max_length=50, choices=MODULO_CHOICES)
+    descripcion = models.TextField()
+    
+    def __str__(self):
+        return f"{self.fecha_hora.strftime('%d/%m/%Y %H:%M')} | {self.usuario.nombre} | {self.modulo} - {self.accion}"

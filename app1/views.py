@@ -5,7 +5,19 @@ from django.db.models import Q, Sum
 from django.http import JsonResponse, HttpResponse
 import datetime
 import openpyxl
-from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig
+from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig, LogActividad
+
+def registrar_log(usuario, finca_id, accion, modulo, descripcion):
+    try:
+        LogActividad.objects.create(
+            usuario=usuario,
+            finca_id=finca_id,
+            accion=accion,
+            modulo=modulo,
+            descripcion=descripcion
+        )
+    except Exception:
+        pass
 
 def login(request):
     if request.method == 'POST':
@@ -19,6 +31,7 @@ def login(request):
             elif check_password(password, user.password):
                 request.session['user'] = user.id
                 ConfiguracionUsuario.objects.get_or_create(user=user)
+                registrar_log(user, None, 'LOGIN', 'SEGURIDAD', f"Inicio de sesión exitoso para {user.nombre}")
                 return redirect('control')
             # Soporte temporal para contraseñas antiguas no encriptadas:
             elif not user.password.startswith('pbkdf2_') and user.password == password:
@@ -27,6 +40,7 @@ def login(request):
                 user.save()
                 request.session['user'] = user.id
                 ConfiguracionUsuario.objects.get_or_create(user=user)
+                registrar_log(user, None, 'LOGIN', 'SEGURIDAD', f"Inicio de sesión exitoso para {user.nombre} (encriptada al vuelo)")
                 return redirect('control')
             else:
                 messages.error(request, 'Contraseña incorrecta')
@@ -64,6 +78,7 @@ def signup(request):
         # Crear Usuario en app1 con contraseña encriptada
         hashed_password = make_password(password)
         nuevo_user = User.objects.create(nombre=nombre, email=email, password=hashed_password)
+        registrar_log(nuevo_user, None, 'CREACION', 'SEGURIDAD', f"Nuevo usuario registrado: {nuevo_user.nombre}")
         
         # Crear Suscripcion Trial en app2 automáticamente (15 días)
         try:
@@ -292,6 +307,7 @@ def registro(request):
                 anim.papa = papa
                 anim.mama = mama
                 anim.save()
+                registrar_log(user, finca_activa_id, 'MODIFICACION', 'ANIMALES', f"Actualizó datos del animal: '{nombre}' ({codigo})")
                 messages.success(request, f"Animal {nombre} actualizado exitosamente.")
             else:
                 # Creación
@@ -309,6 +325,7 @@ def registro(request):
                     papa=papa,
                     mama=mama
                 )
+                registrar_log(user, finca_activa_id, 'CREACION', 'ANIMALES', f"Registró nuevo animal: '{nombre}' ({codigo})")
                 messages.success(request, f"Animal {nombre} registrado exitosamente.")
                 
             return redirect('registro')
@@ -491,6 +508,7 @@ def ordeño(request):
                         hora_finalizacion=hora,
                         observaciones=obs
                     )
+                    registrar_log(user, finca_activa_id, 'CREACION', 'ORDEÑO', f"Registró producción de ordeño: {litros} L para el rebaño '{r.nombre}'")
                     messages.success(request, f"Producción de {litros}L registrada exitosamente para el rebaño {r.nombre}.")
 
             except Exception as e:
@@ -508,6 +526,7 @@ def ordeño(request):
                         vaca.rebaño = rebano_activo
                         
                     vaca.save()
+                    registrar_log(user, finca_activa_id, 'MODIFICACION', 'ANIMALES', f"Activó estado de Lactancia para la vaca '{vaca.nombre}' ({vaca.codigo})")
                     messages.success(request, f"Vaca {vaca.nombre} ({vaca.codigo}) ha sido pasada a estado 'En Lactancia'.")
                 except Animal.DoesNotExist:
                     messages.error(request, "Vaca no encontrada o no es hembra.")
@@ -660,6 +679,7 @@ def ventas(request):
                     animal.save()
                     venta.animales.add(animal)
                     
+                registrar_log(user, finca_activa_id, 'CREACION', 'VENTAS', f"Registró la venta de {len(animal_ids)} animal(es) por un monto total de ${precio}")
                 messages.success(request, f"La venta de {len(animal_ids)} animal(es) ha sido registrada con éxito.")
             except Exception as e:
                 messages.error(request, f"Error al registrar la venta: {str(e)}")
@@ -772,6 +792,7 @@ def datos_animales(request):
                             else:
                                 omitidos += 1
                                 
+                        registrar_log(user, finca_activa_id, 'IMPORTACION', 'ANIMALES', f"Importó animales desde Excel: {creados} creados, {omitidos} omitidos")
                         messages.success(request, f"Importación exitosa. Creados: {creados}. Omitidos (código existente): {omitidos}.")
                 except Exception as e:
                     messages.error(request, f"Error al procesar el Excel: {str(e)}")
@@ -816,6 +837,7 @@ def vacunacion(request):
                     rebaño=reb,
                     observaciones=observaciones
                 )
+                registrar_log(user, finca_activa_id, 'CREACION', 'SANIDAD', f"Programó vacuna: '{vacuna}' para el {fecha_prog}")
                 messages.success(request, f"Plan de vacunación para {vacuna} programado con éxito.")
             except Exception as e:
                 messages.error(request, f"Error al programar: {str(e)}")
@@ -827,6 +849,7 @@ def vacunacion(request):
                 plan.estado = 'COMPLETADO'
                 plan.fecha_aplicacion = datetime.date.today()
                 plan.save()
+                registrar_log(user, finca_activa_id, 'MODIFICACION', 'SANIDAD', f"Marcó como completada la vacunación: '{plan.vacuna}'")
                 messages.success(request, f"Vacunación {plan.vacuna} marcada como completada.")
             except Exception as e:
                 messages.error(request, f"Error: {str(e)}")
@@ -878,6 +901,7 @@ def incidentes(request):
                     diagnostico=diag,
                     tratamiento=trat
                 )
+                registrar_log(user, finca_activa_id, 'CREACION', 'SANIDAD', f"Registró incidente clínico para el animal '{animal.codigo}': {diag}")
                 messages.success(request, f"Incidente registrado para el animal {animal.codigo}.")
             except Exception as e:
                 messages.error(request, f"Error: {str(e)}")
@@ -888,6 +912,7 @@ def incidentes(request):
                 inc = IncidenteSanitario.objects.get(id=incidente_id, finca_id=finca_activa_id)
                 inc.estado = 'RESUELTO'
                 inc.save()
+                registrar_log(user, finca_activa_id, 'MODIFICACION', 'SANIDAD', f"Marcó como resuelto el incidente clínico del animal '{inc.animal.codigo}'")
                 messages.success(request, f"Incidente de {inc.animal.codigo} resuelto.")
             except Exception as e:
                 messages.error(request, f"Error: {str(e)}")
@@ -1161,6 +1186,7 @@ def finanzas(request):
                     tipo=tipo,
                     fecha=fecha
                 )
+                registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f"Registró gasto: '{concepto}' por ${monto} ({tipo})")
                 messages.success(request, 'Gasto registrado correctamente')
             except Exception as e:
                 messages.error(request, f'Error al registrar gasto: {str(e)}')
@@ -1170,6 +1196,7 @@ def finanzas(request):
             try:
                 precio_leche_config.precio_por_litro = precio
                 precio_leche_config.save()
+                registrar_log(user, finca_activa_id, 'CONFIGURACION', 'FINANZAS', f"Actualizó el precio de la leche a ${precio} por litro")
                 messages.success(request, 'Precio del litro de leche actualizado')
             except Exception as e:
                 messages.error(request, f'Error al actualizar precio: {str(e)}')
@@ -1178,7 +1205,10 @@ def finanzas(request):
             gasto_id = request.POST.get('gasto_id')
             try:
                 gasto = GastoFinca.objects.get(id=gasto_id, finca_id=finca_activa_id)
+                concepto_del = gasto.concepto
+                monto_del = gasto.monto
                 gasto.delete()
+                registrar_log(user, finca_activa_id, 'ELIMINACION', 'FINANZAS', f"Eliminó gasto: '{concepto_del}' por ${monto_del}")
                 messages.success(request, 'Gasto eliminado')
             except Exception as e:
                 messages.error(request, f'Error al eliminar: {str(e)}')
@@ -1218,3 +1248,39 @@ def finanzas(request):
         'chart_gastos': chart_gastos,
     }
     return render(request, 'finanzas.html', context)
+
+def auditoria(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        messages.error(request, 'Debe iniciar sesión primero')
+        return redirect('login')
+        
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        messages.error(request, 'Debe crear una finca primero')
+        return redirect('control')
+        
+    # Cargar logs de actividad asociados a la finca actual o generales (sin finca)
+    logs = LogActividad.objects.filter(finca_id=finca_activa_id).order_by('-fecha_hora')
+    
+    # Filtros
+    modulo_filtro = request.GET.get('modulo')
+    accion_filtro = request.GET.get('accion')
+    q = request.GET.get('q')
+    
+    if modulo_filtro:
+        logs = logs.filter(modulo=modulo_filtro)
+    if accion_filtro:
+        logs = logs.filter(accion=accion_filtro)
+    if q:
+        logs = logs.filter(descripcion__icontains=q)
+        
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'logs': logs[:200],  # Mostrar los últimos 200 logs
+        'modulo_filtro': modulo_filtro,
+        'accion_filtro': accion_filtro,
+        'q': q,
+    }
+    return render(request, 'auditoria.html', context)
