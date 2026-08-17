@@ -90,13 +90,7 @@
                             <div class="bg-light p-3 rounded">
                                 <span class="text-muted small text-uppercase fw-bold">GDP Promedio Finca</span>
                                 <h3 class="fw-bold mb-0 text-success">
-                                    {% if corrales %}
-                                        <!-- GDP promediado -->
-                                        {% temp_total_gdp = 0 %}{% temp_count = 0 %}
-                                        0.85 kg/día
-                                    {% else %}
-                                        0.00 kg/día
-                                    {% endif %}
+                                    {{ gdp_promedio_finca|floatformat:2 }} kg/día
                                 </h3>
                                 <small class="text-muted">Ganancia Diaria Promedio de peso</small>
                             </div>

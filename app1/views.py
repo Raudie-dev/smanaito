@@ -1464,6 +1464,9 @@ def engorde(request):
     corrales_list = Corral.objects.filter(finca_id=finca_activa_id)
     corrales_data = []
     
+    total_gdp_finca = 0.0
+    con_gdp_finca = 0
+    
     for c in corrales_list:
         animales = c.animales.filter(estado_vida='VIVO')
         
@@ -1482,6 +1485,10 @@ def engorde(request):
                     con_gdp += 1
                     
         gdp_promedio = total_gdp / con_gdp if con_gdp > 0 else 0.0
+        
+        total_gdp_finca += total_gdp
+        con_gdp_finca += con_gdp
+        
         costo_alimento = RegistroAlimentacion.objects.filter(corral=c).aggregate(total=Sum('costo_total'))['total'] or 0
         
         corrales_data.append({
@@ -1492,6 +1499,7 @@ def engorde(request):
             'ocupacion_porcentaje': (animales.count() / c.capacidad * 100) if c.capacidad > 0 else 0,
         })
         
+    gdp_promedio_finca = total_gdp_finca / con_gdp_finca if con_gdp_finca > 0 else 0.0
     animales_sin_corral = Animal.objects.filter(finca_id=finca_activa_id, estado_vida='VIVO', corral__isnull=True)
     animales_todos = Animal.objects.filter(finca_id=finca_activa_id, estado_vida='VIVO')
     
@@ -1501,6 +1509,7 @@ def engorde(request):
     context = {
         'fincas_usuario': fincas_usuario,
         'corrales': corrales_data,
+        'gdp_promedio_finca': gdp_promedio_finca,
         'animales_sin_corral': animales_sin_corral,
         'animales_todos': animales_todos,
         'tareas': tareas_pendientes,
