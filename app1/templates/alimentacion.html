@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% block section_title %}Alimentación Avanzada y Mixer{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h5 class="fw-bold mb-1"><i class="bi bi-truck text-success me-2"></i>Alimentación Avanzada</h5>
+            <p class="text-muted small mb-0">Planifique dietas, ajuste raciones según bunk score, proyecte costos y calcule viajes del Mixer.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearProtocolo">
+                <i class="bi bi-plus-circle me-1"></i> Diseñar Dieta / Protocolo
+            </button>
+            <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalMixer">
+                <i class="bi bi-calculator me-1"></i> Calculadora Mixer
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Resultado Reciente del Mixer -->
+    {% if resultado_mixer %}
+    <div class="card shadow-sm border-0 border-start border-4 border-success mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="mb-0 fw-bold text-success"><i class="bi bi-check2-circle me-2"></i>Orden de Carga del Mixer Generada</h6>
+        </div>
+        <div class="card-body">
+            <p class="small text-muted mb-2">
+                Distribución de carga para el corral <strong>{{ resultado_mixer.corral }}</strong> usando la dieta <strong>{{ resultado_mixer.protocolo }}</strong>.
+                Ración total requerida: <strong>{{ resultado_mixer.racion_total|floatformat:2 }} kg</strong>.
+            </p>
+            <div class="row">
+                {% for v in resultado_mixer.viajes %}
+                <div class="col-md-6 mb-3">
+                    <div class="bg-light p-3 rounded border border-light">
+                        <h6 class="fw-bold text-dark mb-2">Viaje #{{ v.viaje_numero }} (Carga total: {{ v.carga_total_kg|floatformat:1 }} kg)</h6>
+                        <ul class="list-unstyled mb-0 small">
+                            {% for ing in v.ingredientes %}
+                            <li class="d-flex justify-content-between mb-1 py-1 border-bottom">
+                                <span>{{ ing.nombre }}</span>
+                                <span class="fw-bold text-primary">{{ ing.cantidad_kg|floatformat:1 }} kg</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Fila de Proyecciones Financieras y Bunk Scoring -->
+    <div class="row mb-4">
+        <!-- Proyecciones Financieras por Corral -->
+        <div class="col-lg-8 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Proyección de Costos de Alimentación por Corral</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 small">
+                            <thead class="table-light text-uppercase text-muted">
+                                <tr>
+                                    <th class="ps-4">Corral</th>
+                                    <th>Cabezas</th>
+                                    <th>Dieta Sim.</th>
+                                    <th>Ajuste (Score)</th>
+                                    <th>Costo/Animal Día</th>
+                                    <th class="pe-4 text-end">Costo Proyectado Mensual</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cp in corrales_proyecciones %}
+                                <tr>
+                                    <td class="ps-4 fw-bold">{{ cp.corral.nombre }}</td>
+                                    <td>{{ cp.num_animales }}</td>
+                                    <td>{{ cp.dieta }}</td>
+                                    <td>
+                                        <span class="badge {% if cp.ajuste > 0 %}bg-success{% elif cp.ajuste < 0 %}bg-danger{% else %}bg-secondary{% endif %} bg-opacity-10 text-dark border-0">
+                                            {{ cp.ajuste }}%
+                                        </span>
+                                    </td>
+                                    <td>${{ cp.costo_diario_animal|floatformat:2 }}</td>
+                                    <td class="pe-4 text-end fw-bold text-success">${{ cp.costo_mensual_corral|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="text-center py-4">Registre corrales primero.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bunk Scoring (Lectura de Comederos) -->
+        <div class="col-lg-4 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-eye text-danger me-2"></i>Lectura de Comederos (Bunk Score)</h6>
+                </div>
+                <div class="card-body bg-light">
+                    <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="registrar_lectura">
+                        
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Seleccione Corral</label>
+                            <select name="corral_id" class="form-select form-select-sm" required>
+                                {% for c in corrales %}
+                                    <option value="{{ c.id }}">{{ c.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Puntuación del Comedero</label>
+                            <select name="puntuacion" class="form-select form-select-sm" required>
+                                <option value="0">0 - Vacío / Limpio (+5% ración)</option>
+                                <option value="1">1 - Escaso alimento (+2% ración)</option>
+                                <option value="2" selected>2 - Óptimo (Mantener ración)</option>
+                                <option value="3">3 - Exceso acumulado (-5% ración)</option>
+                                <option value="4">4 - Alimento intacto (-10% ración)</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-sm btn-danger w-100 shadow-sm"><i class="bi bi-save me-1"></i> Guardar Ajuste</button>
+                    </form>
+                    
+                    <div class="alert alert-info border-0 bg-info bg-opacity-10 text-dark small mb-0 mt-3 py-2">
+                        <i class="bi bi-info-circle-fill me-2 text-info"></i>
+                        El puntaje de comederos ajusta automáticamente las metas de alimentación diaria del Mixer.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dietas Registradas -->
+    <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-journal-text me-2"></i>Dietas y Protocolos Alimentarios</h6>
+    <div class="row">
+        {% for p, ings in protocolos %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">{{ p.nombre }}</h5>
+                    <ul class="list-unstyled mb-3 small">
+                        {% for ing in ings %}
+                        <li class="d-flex justify-content-between mb-1 py-1 border-bottom border-light">
+                            <span>{{ ing.nombre }} ({{ ing.porcentaje }}%)</span>
+                            <span class="text-muted">${{ ing.costo_por_kg|floatformat:2 }}/kg</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="bg-light p-2.5 rounded d-flex justify-content-between small">
+                        <span>Ración diaria base:</span>
+                        <strong class="text-dark">{{ p.racion_base_kg }} kg</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-muted py-4">
+            <i class="bi bi-journal-text fs-1 text-light mb-2 d-block"></i>
+            <p class="small">No hay dietas registradas. Genere una nueva dieta para habilitar proyecciones.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Modal Crear Protocolo -->
+<div class="modal fade" id="modalCrearProtocolo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Nueva Dieta / Protocolo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="crear_protocolo">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Nombre de la Dieta</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej: Dieta Engorde Rápido" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Ración Base (kg/día)</label>
+                            <input type="number" step="0.1" name="racion_base_kg" class="form-control" value="6.5" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small">Días Transición</label>
+                            <input type="number" name="dias_transicion" class="form-control" value="10" required>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold small border-bottom pb-2 mb-2 mt-3">Ingredientes de la Dieta</h6>
+                    <div id="contenedor-ingredientes">
+                        <!-- Ingrediente 1 -->
+                        <div class="row g-2 mb-2 border-bottom pb-2 border-light align-items-end">
+                            <div class="col-5">
+                                <label class="form-label text-muted small">Nombre</label>
+                                <input type="text" name="ingrediente_nombre[]" class="form-control form-control-sm" placeholder="Ej: Maíz Molido" required>
+                            </div>
+                            <div class="col-3">
+                                <label class="form-label text-muted small">Porc %</label>
+                                <input type="number" name="ingrediente_porcentaje[]" class="form-control form-control-sm" placeholder="60" required min="1" max="100">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label text-muted small">Costo $/kg</label>
+                                <input type="number" step="0.01" name="ingrediente_costo[]" class="form-control form-control-sm" placeholder="0.25" required>
+                            </div>
+                        </div>
+                        <!-- Ingrediente 2 -->
+                        <div class="row g-2 mb-2 border-bottom pb-2 border-light align-items-end">
+                            <div class="col-5">
+                                <input type="text" name="ingrediente_nombre[]" class="form-control form-control-sm" placeholder="Ej: Soya / Proteína">
+                            </div>
+                            <div class="col-3">
+                                <input type="number" name="ingrediente_porcentaje[]" class="form-control form-control-sm" placeholder="40" min="1" max="100">
+                            </div>
+                            <div class="col-4">
+                                <input type="number" step="0.01" name="ingrediente_costo[]" class="form-control form-control-sm" placeholder="0.40">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i> Guardar Dieta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Mixer -->
+<div class="modal fade" id="modalMixer" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-success">Calcular Viajes de Carga del Mixer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="calcular_mixer">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Capacidad Máxima del Mixer (kg)</label>
+                        <input type="number" name="capacidad_mixer_kg" class="form-control form-control-lg text-center fw-bold" value="1000" min="50" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Seleccione Corral de Destino</label>
+                        <select name="corral_id" class="form-select" required>
+                            {% for c in corrales %}
+                                <option value="{{ c.id }}">{{ c.nombre }} ({{ c.count_animales }} Cabezas)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Seleccione Dieta a Preparar</label>
+                        <select name="protocolo_id" class="form-select" required>
+                            {% for p, ings in protocols %}
+                                <option value="{{ p.id }}">{{ p.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="bi bi-calculator me-1"></i> Calcular Carga</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

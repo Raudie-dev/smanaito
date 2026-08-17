@@ -360,3 +360,32 @@ class ProtocoloTratamiento(models.Model):
 
     def __str__(self):
         return f"{self.nombre} (Tratamiento: {self.medicamento})"
+
+class ProtocoloAlimentacion(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='protocolos_alimentacion')
+    nombre = models.CharField(max_length=150)
+    ingredientes_json = models.TextField(help_text="Ingredientes y proporciones en formato JSON, ej: [{'nombre': 'Maíz', 'porcentaje': 60, 'costo_por_kg': 0.15}]")
+    racion_base_kg = models.DecimalField(max_digits=6, decimal_places=2, default=5.00, help_text="Ración diaria base por animal")
+    dias_transicion = models.IntegerField(default=10, help_text="Días de transición para incrementos")
+    incremento_porcentaje = models.DecimalField(max_digits=5, decimal_places=2, default=5.00, help_text="Porcentaje de incremento sugerido por transición")
+
+    def __str__(self):
+        return self.nombre
+
+class LecturaComedero(models.Model):
+    corral = models.ForeignKey(Corral, on_delete=models.CASCADE, related_name='lecturas_comederos')
+    fecha = models.DateField()
+    puntuacion = models.IntegerField(choices=[(i, str(i)) for i in range(5)], help_text="Puntuación de 0 a 4 (0: vacío, 4: intacto)")
+    ajuste_sugerido_porcentaje = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text="Ajuste automático calculado")
+
+    def __str__(self):
+        return f"{self.corral.nombre} | {self.fecha} | Puntaje: {self.puntuacion}"
+
+class OrdenCargaMixer(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='ordenes_mixer')
+    fecha = models.DateField()
+    capacidad_mixer_kg = models.DecimalField(max_digits=8, decimal_places=2)
+    viajes_json = models.TextField(help_text="Detalles de viajes e ingredientes por viaje en formato JSON")
+
+    def __str__(self):
+        return f"Orden Mixer {self.fecha} | Capacidad: {self.capacidad_mixer_kg}kg"
