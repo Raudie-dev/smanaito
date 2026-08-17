@@ -5,7 +5,7 @@ from django.db.models import Q, Sum
 from django.http import JsonResponse, HttpResponse
 import datetime
 import openpyxl
-from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento
+from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento, ProtocoloAlimentacion, LecturaComedero, OrdenCargaMixer
 
 def registrar_log(usuario, finca_id, accion, modulo, descripcion):
     try:
@@ -1724,3 +1724,209 @@ def manga_manejo(request):
         'corral_hospital': corral_hospital,
     }
     return render(request, 'manga.html', context)
+
+def alimentacion_avanzada(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        messages.error(request, 'Debe iniciar sesión primero')
+        return redirect('login')
+        
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        messages.error(request, 'Debe crear una finca primero')
+        return redirect('control')
+
+    # POST
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'crear_protocolo':
+            nombre = request.POST.get('nombre')
+            racion_base = request.POST.get('racion_base_kg')
+            dias_trans = request.POST.get('dias_transicion', 10)
+            inc_porc = request.POST.get('incremento_porcentaje', 5.00)
+            
+            # Procesar ingredientes dinamicos desde el formulario
+            nombres_ing = request.POST.getlist('ingrediente_nombre[]')
+            porcentajes_ing = request.POST.getlist('ingrediente_porcentaje[]')
+            costos_ing = request.POST.getlist('ingrediente_costo[]')
+            
+            ingrediente_list = []
+            for i in range(len(nombres_ing)):
+                if nombres_ing[i].strip():
+                    ingrediente_list.append({
+                        'nombre': nombres_ing[i].strip(),
+                        'porcentaje': float(porcentajes_ing[i] or 0),
+                        'costo_por_kg': float(costos_ing[i] or 0)
+                    })
+            
+            try:
+                ProtocoloAlimentacion.objects.create(
+                    finca_id=finca_activa_id,
+                    nombre=nombre,
+                    ingredientes_json=json.dumps(ingrediente_list),
+                    racion_base_kg=racion_base,
+                    dias_transicion=dias_trans,
+                    incremento_porcentaje=inc_porc
+                )
+                registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f"Creó protocolo de alimentación: '{nombre}'")
+                messages.success(request, f"Protocolo '{nombre}' creado con éxito.")
+            except Exception as e:
+                messages.error(request, f"Error al crear protocolo: {str(e)}")
+                
+        elif action == 'registrar_lectura':
+            corral_id = request.POST.get('corral_id')
+            puntuacion = int(request.POST.get('puntuacion', 2))
+            
+            # Tabla de ajuste sugerido según Feed Bunk Scoring
+            ajustes = {
+                0: 5.00,   # Vacío, aumentar ración 5%
+                1: 2.00,   # Escaso, aumentar ración 2%
+                2: 0.00,   # Óptimo, mantener ración
+                3: -5.00,  # Exceso, reducir ración 5%
+                4: -10.00  # Intacto, reducir ración 10%
+            }
+            ajuste_sug = ajustes.get(puntuacion, 0.00)
+            
+            try:
+                corral = Corral.objects.get(id=corral_id, finca_id=finca_activa_id)
+                LecturaComedero.objects.create(
+                    corral=corral,
+                    fecha=datetime.date.today(),
+                    puntuacion=puntuacion,
+                    ajuste_sugerido_porcentaje=ajuste_sug
+                )
+                registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f"Registró bunk score {puntuacion} para corral '{corral.nombre}' (Ajuste sugerido: {ajuste_sug}%)")
+                messages.success(request, f"Lectura registrada. Ajuste sugerido: {ajuste_sug}%")
+            except Exception as e:
+                messages.error(request, f"Error al registrar lectura: {str(e)}")
+                
+        elif action == 'calcular_mixer':
+            cap_mixer = float(request.POST.get('capacidad_mixer_kg', 1000))
+            corral_id = request.POST.get('corral_id')
+            protocolo_id = request.POST.get('protocolo_id')
+            
+            try:
+                corral = Corral.objects.get(id=corral_id, finca_id=finca_activa_id)
+                protocolo = ProtocoloAlimentacion.objects.get(id=protocolo_id, finca_id=finca_activa_id)
+                
+                num_animales = corral.count_animales()
+                if num_animales == 0:
+                    messages.error(request, "El corral no tiene animales asignados.")
+                    return redirect('alimentacion')
+                    
+                # Ración básica total
+                racion_total = float(num_animales) * float(protocolo.racion_base_kg)
+                
+                # Ajuste por lectura reciente de comedero
+                ultima_lectura = LecturaComedero.objects.filter(corral=corral).order_by('-fecha').first()
+                factor_ajuste = 1.0
+                if ultima_lectura:
+                    factor_ajuste += float(ultima_lectura.ajuste_sugerido_porcentaje) / 100.0
+                    racion_total = racion_total * factor_ajuste
+                
+                # Desglose de ingredientes
+                ingredientes = json.loads(protocolo.ingredientes_json)
+                
+                # Calcular viajes del Mixer
+                num_viajes = int(racion_total // cap_mixer)
+                resto = racion_total % cap_mixer
+                if resto > 0:
+                    num_viajes += 1
+                    
+                viajes = []
+                for v in range(num_viajes):
+                    carga_viaje = cap_mixer if (v < num_viajes - 1 or resto == 0) else resto
+                    detalles_ingredientes = []
+                    for ing in ingredientes:
+                        kg_ing = (float(ing['porcentaje']) / 100.0) * carga_viaje
+                        costo_ing = kg_ing * float(ing['costo_por_kg'])
+                        detalles_ingredientes.append({
+                            'nombre': ing['nombre'],
+                            'cantidad_kg': kg_ing,
+                            'costo': costo_ing
+                        })
+                    viajes.append({
+                        'viaje_numero': v + 1,
+                        'carga_total_kg': carga_viaje,
+                        'ingredientes': detalles_ingredientes
+                    })
+                
+                OrdenCargaMixer.objects.create(
+                    finca_id=finca_activa_id,
+                    fecha=datetime.date.today(),
+                    capacidad_mixer_kg=cap_mixer,
+                    viajes_json=json.dumps(viajes)
+                )
+                
+                # Mensaje detallado para sesión
+                request.session['resultado_mixer'] = {
+                    'corral': corral.nombre,
+                    'protocolo': protocolo.nombre,
+                    'racion_total': racion_total,
+                    'viajes': viajes
+                }
+                messages.success(request, "Orden de carga y entrega del Mixer generada correctamente.")
+            except Exception as e:
+                messages.error(request, f"Error al calcular carga de Mixer: {str(e)}")
+                
+        return redirect('alimentacion')
+        
+    # GET
+    protocolos = ProtocoloAlimentacion.objects.filter(finca_id=finca_activa_id)
+    corrales = Corral.objects.filter(finca_id=finca_activa_id)
+    
+    # Procesar proyecciones de costos para cada corral
+    corrales_proyecciones = []
+    for c in corrales:
+        num_animales = c.count_animales()
+        # Buscar última lectura de comedero
+        lectura = LecturaComedero.objects.filter(corral=c).order_by('-fecha').first()
+        ajuste = lectura.ajuste_sugerido_porcentaje if lectura else 0.0
+        
+        # Dieta sugerida basada en primer protocolo disponible (si hay alguno)
+        dieta_nombre = "Sin Dieta Asignada"
+        costo_diario_animal = 0.0
+        costo_mensual_corral = 0.0
+        
+        if protocolos.exists():
+            p = protocolos.first() # Usar el primero por defecto para simular
+            dieta_nombre = p.nombre
+            ingredientes = json.loads(p.ingredientes_json)
+            costo_por_kg = sum((float(ing['porcentaje']) / 100.0) * float(ing['costo_por_kg']) for ing in ingredientes)
+            
+            racion_ajustada = float(p.racion_base_kg) * (1.0 + float(ajuste)/100.0)
+            costo_diario_animal = racion_ajustada * costo_por_kg
+            costo_mensual_corral = costo_diario_animal * num_animales * 30.0
+            
+        corrales_proyecciones.append({
+            'corral': c,
+            'num_animales': num_animales,
+            'ultima_puntuacion': lectura.puntuacion if lectura else 'Sin lectura',
+            'ajuste': ajuste,
+            'dieta': dieta_nombre,
+            'costo_diario_animal': costo_diario_animal,
+            'costo_mensual_corral': costo_mensual_corral,
+        })
+        
+    resultado_mixer = request.session.pop('resultado_mixer', None)
+    ordenes_recientes = OrdenCargaMixer.objects.filter(finca_id=finca_activa_id).order_by('-fecha')[:5]
+    
+    # Formatear las ordenes recientes
+    ordenes_data = []
+    for o in ordenes_recientes:
+        ordenes_data.append({
+            'orden': o,
+            'viajes': json.loads(o.viajes_json)
+        })
+        
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'protocolos': [(p, json.loads(p.ingredientes_json)) for p in protocolos],
+        'corrales_proyecciones': corrales_proyecciones,
+        'corrales': corrales,
+        'resultado_mixer': resultado_mixer,
+        'ordenes_recientes': ordenes_data,
+    }
+    return render(request, 'alimentacion.html', context)

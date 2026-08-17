@@ -23,6 +23,7 @@ urlpatterns = [
     path('perfil/', views.perfil, name='perfil'),
     path('engorde/', views.engorde, name='engorde'),
     path('manga/', views.manga_manejo, name='manga'),
+    path('alimentacion/', views.alimentacion_avanzada, name='alimentacion'),
     
     # Endpoints API
     path('api/buscar_padre/', views.api_buscar_padre, name='api_buscar_padre'),
