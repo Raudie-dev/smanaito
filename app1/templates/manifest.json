@@ -1,22 +1,27 @@
 {
-    "name": "Samanito SaaS",
+    "name": "Samanito SaaS Ganadero",
     "short_name": "Samanito",
-    "description": "Sistema de Gestión Ganadera Inteligente",
-    "start_url": "/login/",
+    "description": "Sistema de Gestión Ganadera Inteligente y Control Financiero",
+    "start_url": "/control/",
     "scope": "/",
     "display": "standalone",
-    "background_color": "#f4f7f6",
-    "theme_color": "#2e7d32",
+    "display_override": ["standalone", "minimal-ui"],
+    "orientation": "portrait-primary",
+    "background_color": "#1e3b20",
+    "theme_color": "#1e3b20",
+    "categories": ["business", "productivity", "utilities"],
     "icons": [
         {
             "src": "/static/img/Samanito_logo.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         },
         {
             "src": "/static/img/Samanito_logo.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any maskable"
         }
     ]
 }

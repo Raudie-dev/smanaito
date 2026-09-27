@@ -1,0 +1,45 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Gestión de Planes | Samanito Master Admin{% endblock %}
+
+{% block admin_content %}
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-tags-fill me-2 text-warning"></i>Planes Disponibles (Se muestran en la Landing Page)</h6>
+        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalCrearPlan">
+            <i class="bi bi-plus-lg me-1"></i> Crear Nuevo Plan
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            {% for p in planes %}
+            <div class="col-md-6 col-xl-3">
+                <div class="card h-100 shadow-sm border-0 p-3 position-relative {% if p.destacado %}border border-2 border-success{% endif %} {% if not p.activo %}opacity-75 bg-light{% endif %}">
+                    <div class="position-absolute top-0 end-0 m-2 d-flex gap-1">
+                        {% if not p.activo %}
+                        <span class="badge bg-secondary text-white">Oculto Landing</span>
+                        {% elif p.destacado %}
+                        <span class="badge bg-success text-white">Destacado</span>
+                        {% else %}
+                        <span class="badge bg-info text-dark">Visible Landing</span>
+                        {% endif %}
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1 mt-3">{{ p.nombre }}</h5>
+                    <span class="badge bg-light text-dark border w-auto mb-2">{{ p.badge }}</span>
+                    <h3 class="fw-bold text-success mb-2">${{ p.precio_mensual }}<small class="fs-6 text-muted">/mes</small></h3>
+                    <p class="text-muted small mb-3">{{ p.descripcion }}</p>
+                    <div class="d-flex gap-2 mt-auto">
+                        <button class="btn btn-sm btn-outline-dark flex-grow-1" data-bs-toggle="modal" data-bs-target="#modalEditarPlan{{ p.id }}">
+                            <i class="bi bi-pencil me-1"></i> Editar
+                        </button>
+                        <a href="{% url 'eliminar_plan_saas' p.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Estás seguro de que deseas eliminar este plan?');" title="Eliminar Plan">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

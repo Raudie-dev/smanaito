@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+{% block section_title %}Estructura de Costos{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Header Page Row -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h5 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-calculator text-primary me-2"></i>Estructura de Costos y Gastos Recurrentes
+            </h5>
+            <p class="text-muted small mb-0">Planificación presupuestaria fija, recurrencias periódicas y proyecciones de impacto financiero.</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary shadow-sm px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalCrearGastoRecurrente">
+                <i class="bi bi-plus-circle me-1"></i> Nuevo Gasto Recurrente
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-info-circle me-2"></i>{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Metric Cards Grid -->
+    <div class="row mb-4">
+        <!-- Proyección Mensual -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-primary border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Proyección Mensual</span>
+                        <div class="p-2 rounded-circle bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-calendar-check fs-4"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark">${{ eq_mensual|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0"><i class="bi bi-arrow-repeat me-1 text-primary"></i>Suma mensual ponderada</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Proyección Anual -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-success border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Proyección Anual</span>
+                        <div class="p-2 rounded-circle bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-graph-up-arrow fs-4"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-success">${{ eq_anual|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0"><i class="bi bi-shield-check me-1 text-success"></i>Impacto total anual estimado</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Efectivo Semanal -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-warning border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Gastos Semanales</span>
+                        <div class="p-2 rounded-circle bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-cash-stack fs-4"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark">${{ total_semanal|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0"><i class="bi bi-clock-history me-1 text-warning"></i>Flujo de caja semanal</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conceptos Activos -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-info border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Fijos Activos</span>
+                        <div class="p-2 rounded-circle bg-info bg-opacity-10 text-info">
+                            <i class="bi bi-check2-square fs-4"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark">{{ gastos_recurrentes.count }}</h3>
+                    <p class="text-muted small mb-0"><i class="bi bi-layers me-1 text-info"></i>Conceptos configurados</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables Row: Breakdown by Frequency & Category -->
+    <div class="row mb-4">
+        <!-- Frecuencias Card -->
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Resumen por Frecuencia de Pago
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th>Frecuencia</th>
+                                    <th>Monto Fijo</th>
+                                    <th class="text-end">Equiv. Mensual</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-1 fw-semibold">
+                                            Semanal
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold text-dark">${{ total_semanal|floatformat:2 }}</td>
+                                    <td class="text-end fw-bold text-primary">${{ semanal_eq_mensual|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1 fw-semibold">
+                                            Mensual
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold text-dark">${{ total_mensual|floatformat:2 }}</td>
+                                    <td class="text-end fw-bold text-success">${{ mensual_eq_mensual|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-1 fw-semibold">
+                                            Semestral
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold text-dark">${{ total_semestral|floatformat:2 }}</td>
+                                    <td class="text-end fw-bold text-dark">${{ semestral_eq_mensual|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill px-3 py-1 fw-semibold">
+                                            Anual
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold text-dark">${{ total_anual|floatformat:2 }}</td>
+                                    <td class="text-end fw-bold text-info">${{ anual_eq_mensual|floatformat:2 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categorias Card -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-folder-symlink-fill me-2 text-success"></i>Distribución Mensual por Categoría
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th>Categoría</th>
+                                    <th>Conceptos</th>
+                                    <th class="text-end">Equiv. Mensual</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in categorias_info %}
+                                <tr>
+                                    <td class="fw-semibold text-dark">
+                                        <i class="bi bi-folder2 me-2 text-primary"></i>{{ cat.nombre }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-circle px-2 py-1">{{ cat.count }}</span>
+                                    </td>
+                                    <td class="text-end fw-bold text-dark">${{ cat.eq_mensual|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4 small">No hay gastos configurados por categoría.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table Card -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom border-light">
+            <h6 class="mb-0 fw-bold text-dark">
+                <i class="bi bi-receipt me-2 text-primary"></i>Conceptos Recurrentes Registrados
+            </h6>
+            <span class="badge bg-light text-dark border px-3 py-2 rounded-pill fw-semibold">
+                {{ gastos_recurrentes.count }} Gastos
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted small text-uppercase">
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Categoría</th>
+                            <th>Frecuencia</th>
+                            <th>Monto</th>
+                            <th>Estado</th>
+                            <th>Inicio</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in gastos_recurrentes %}
+                        <tr class="{% if not g.activo %}table-light opacity-50{% endif %}">
+                            <td>
+                                <div class="fw-bold text-dark">{{ g.concepto }}</div>
+                                {% if g.observaciones %}
+                                <small class="text-muted"><i class="bi bi-chat-left-text me-1"></i>{{ g.observaciones }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border px-2 py-1 fw-normal">
+                                    {{ g.get_categoria_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if g.frecuencia == 'SEMANAL' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-1">Semanal</span>
+                                {% elif g.frecuencia == 'MENSUAL' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">Mensual</span>
+                                {% elif g.frecuencia == 'SEMESTRAL' %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-1">Semestral</span>
+                                {% else %}
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill px-3 py-1">Anual</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold text-success fs-6">${{ g.monto|floatformat:2 }}</td>
+                            <td>
+                                <form method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="toggle_activo">
+                                    <input type="hidden" name="gasto_id" value="{{ g.id }}">
+                                    {% if g.activo %}
+                                    <button type="submit" class="btn btn-sm btn-success bg-opacity-10 text-success border-success border-opacity-25 rounded-pill px-3 py-0 fw-semibold">Activo</button>
+                                    {% else %}
+                                    <button type="submit" class="btn btn-sm btn-secondary bg-opacity-10 text-secondary border-secondary border-opacity-25 rounded-pill px-3 py-0 fw-semibold">Inactivo</button>
+                                    {% endif %}
+                                </form>
+                            </td>
+                            <td class="text-muted small">{{ g.fecha_inicio|date:"d/m/Y" }}</td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <form method="POST" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="cargar_a_gastos">
+                                        <input type="hidden" name="gasto_id" value="{{ g.id }}">
+                                        <button type="submit" class="btn btn-outline-success" title="Asentar en Finanzas real">
+                                            <i class="bi bi-cash-coin me-1"></i>Asentar
+                                        </button>
+                                    </form>
+
+                                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalEditarGasto{{ g.id }}" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    <form method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar este gasto recurrente?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="eliminar_gasto_recurrente">
+                                        <input type="hidden" name="gasto_id" value="{{ g.id }}">
+                                        <button type="submit" class="btn btn-outline-danger" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Modal Editar -->
+                                <div class="modal fade" id="modalEditarGasto{{ g.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered text-start">
+                                        <div class="modal-content border-0 shadow">
+                                            <div class="modal-header bg-light">
+                                                <h5 class="modal-title fw-bold text-dark">
+                                                    <i class="bi bi-pencil-square text-primary me-2"></i>Editar Gasto Recurrente
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <form method="POST">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="action" value="editar_gasto_recurrente">
+                                                <input type="hidden" name="gasto_id" value="{{ g.id }}">
+                                                <div class="modal-body p-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-semibold text-dark">Concepto / Descripción</label>
+                                                        <input type="text" name="concepto" class="form-control" value="{{ g.concepto }}" required>
+                                                    </div>
+                                                    <div class="row g-3 mb-3">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold text-dark">Categoría</label>
+                                                            <select name="categoria" class="form-select" required>
+                                                                {% for cat_code, cat_name in categoria_choices %}
+                                                                <option value="{{ cat_code }}" {% if g.categoria == cat_code %}selected{% endif %}>{{ cat_name }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold text-dark">Frecuencia</label>
+                                                            <select name="frecuencia" class="form-select" required>
+                                                                {% for freq_code, freq_name in frecuencia_choices %}
+                                                                <option value="{{ freq_code }}" {% if g.frecuencia == freq_code %}selected{% endif %}>{{ freq_name }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row g-3 mb-3">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold text-dark">Monto ($)</label>
+                                                            <input type="number" step="0.01" name="monto" class="form-control" value="{{ g.monto }}" required>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label fw-semibold text-dark">Fecha de Inicio</label>
+                                                            <input type="date" name="fecha_inicio" class="form-control" value="{{ g.fecha_inicio|date:'Y-m-d' }}">
+                                                        </div>
+                                                    </div>
+                                                    <div class="mb-2">
+                                                        <label class="form-label fw-semibold text-dark">Observaciones</label>
+                                                        <textarea name="observaciones" class="form-control" rows="2">{{ g.observaciones|default:'' }}</textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer bg-light">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-primary fw-semibold">Guardar Cambios</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary"></i>
+                                <h6 class="fw-bold text-dark mb-1">No hay gastos recurrentes registrados</h6>
+                                <p class="small mb-3 text-muted">Añada gastos semanales, mensuales o anuales para visualizar su estructura de costos.</p>
+                                <button type="button" class="btn btn-primary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearGastoRecurrente">
+                                    <i class="bi bi-plus-circle me-1"></i> Registrar Primer Gasto
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear Gasto Recurrente -->
+<div class="modal fade" id="modalCrearGastoRecurrente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle me-2"></i>Registrar Gasto Recurrente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="crear_gasto_recurrente">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-dark">Concepto / Descripción</label>
+                        <input type="text" name="concepto" class="form-control" placeholder="Ej. Nómina Fija Semanal, Servicio Eléctrico, Vacunas" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Categoría</label>
+                            <select name="categoria" class="form-select" required>
+                                {% for cat_code, cat_name in categoria_choices %}
+                                <option value="{{ cat_code }}">{{ cat_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Frecuencia</label>
+                            <select name="frecuencia" class="form-select" required>
+                                {% for freq_code, freq_name in frecuencia_choices %}
+                                <option value="{{ freq_code }}" {% if freq_code == 'MENSUAL' %}selected{% endif %}>{{ freq_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Monto ($)</label>
+                            <input type="number" step="0.01" name="monto" class="form-control" placeholder="0.00" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark">Fecha de Inicio</label>
+                            <input type="date" name="fecha_inicio" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold text-dark">Observaciones (Opcional)</label>
+                        <textarea name="observaciones" class="form-control" rows="2" placeholder="Detalles o notas sobre la recurrencia..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-check-circle me-1"></i> Guardar Gasto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

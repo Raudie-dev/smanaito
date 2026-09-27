@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block section_title %}Hoja de Vida: {{ animal.codigo }}{% endblock %}
+
+{% block content %}
+<style>
+    @media print {
+        body { background: #fff !important; }
+        .sidebar, .navbar, .btn-print, .actions { display: none !important; }
+        .content { margin-left: 0 !important; width: 100% !important; padding: 0 !important; }
+        .card { border: none !important; box-shadow: none !important; }
+        .timeline-item { page-break-inside: avoid; }
+    }
+    .timeline { border-left: 2px solid #e9ecef; margin-left: 15px; padding-left: 20px; position: relative; }
+    .timeline-item { position: relative; margin-bottom: 1.5rem; }
+    .timeline-item::before {
+        content: ''; position: absolute; left: -26px; top: 0; width: 12px; height: 12px;
+        border-radius: 50%; background-color: #0d6efd; border: 2px solid #fff;
+    }
+</style>
+
+<div class="d-flex justify-content-end mb-3 actions">
+    <button onclick="window.print()" class="btn btn-primary btn-print"><i class="bi bi-printer me-2"></i>Imprimir Hoja de Vida</button>
+</div>
+
+<div class="row g-4">
+    <!-- Perfil del Animal -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="display-1 text-muted"><i class="bi bi-award"></i></div>
+                    <h4 class="fw-bold mt-2 mb-0">{{ animal.nombre }}</h4>
+                    <span class="badge bg-secondary">{{ animal.codigo }}</span>
+                </div>
+                
+                <ul class="list-group list-group-flush small">
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Sexo:</span>
+                        <span class="fw-bold">{{ animal.get_sexo_display }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Raza:</span>
+                        <span class="fw-bold">{{ animal.composicion_racial|default:"No especificada" }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Fecha Nac.:</span>
+                        <span class="fw-bold">{{ animal.fecha_nacimiento|date:"d/m/Y" }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Padre:</span>
+                        <span class="fw-bold">{% if animal.padre %}{{ animal.padre.codigo }}{% else %}-{% endif %}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0">
+                        <span class="text-muted">Madre:</span>
+                        <span class="fw-bold">{% if animal.mama %}{{ animal.mama.codigo }}{% else %}-{% endif %}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between px-0 border-bottom-0">
+                        <span class="text-muted">Propietario:</span>
+                        <span class="fw-bold">{{ animal.propietario|default:"Finca" }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Línea de Tiempo (Trazabilidad) -->
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Línea de Tiempo (Trazabilidad)</h6>
+            </div>
+            <div class="card-body">
+                {% if timeline %}
+                <div class="timeline">
+                    {% for item in timeline %}
+                    <div class="timeline-item">
+                        <small class="text-primary fw-bold">{{ item.fecha|date:"d M Y" }}</small>
+                        <h6 class="mb-1 mt-1 fw-bold">
+                            {% if item.tipo == 'NACIMIENTO' %}<i class="bi bi-star-fill text-warning me-1"></i>
+                            {% elif item.tipo == 'PESAJE' %}<i class="bi bi-speedometer2 text-info me-1"></i>
+                            {% elif item.tipo == 'SANIDAD' %}<i class="bi bi-capsule text-danger me-1"></i>
+                            {% elif item.tipo in 'SERVICIO,DIAGNOSTICO,PARTO' %}<i class="bi bi-balloon-heart text-success me-1"></i>
+                            {% endif %}
+                            {{ item.tipo }}
+                        </h6>
+                        <p class="text-muted small mb-0">{{ item.desc }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">No hay eventos registrados para este animal.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

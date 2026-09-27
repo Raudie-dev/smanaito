@@ -1,0 +1,73 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Clientes (SaaS) | Samanito Master Admin{% endblock %}
+
+{% block admin_content %}
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-people-fill me-2 text-primary"></i>Gestión de Clientes (Fincas Ganaderas)</h6>
+        <span class="badge bg-light text-dark border">{{ total_clientes }} registrados</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase">
+                    <tr>
+                        <th>ID</th>
+                        <th>Usuario / Finca</th>
+                        <th>Correo</th>
+                        <th>Estado Acceso</th>
+                        <th>Plan Actual</th>
+                        <th>Suscripción</th>
+                        <th>Vencimiento</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in clientes %}
+                    <tr>
+                        <td class="fw-bold text-muted">#{{ cliente.id }}</td>
+                        <td class="fw-bold text-dark">{{ cliente.nombre }}</td>
+                        <td class="text-muted small">{{ cliente.email|default:"Sin correo" }}</td>
+                        <td>
+                            {% if cliente.bloqueado %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">Bloqueado</span>
+                            {% else %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">Activo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-dark text-white px-2.5 py-1">{{ cliente.suscripcion_saas.plan }}</span>
+                        </td>
+                        <td>
+                            {% if cliente.suscripcion_saas.estado == 'ACTIVA' %}
+                                <span class="text-success fw-bold small"><i class="bi bi-check-circle-fill me-1"></i> Activa</span>
+                            {% elif cliente.suscripcion_saas.estado == 'VENCIDA' %}
+                                <span class="text-danger fw-bold small"><i class="bi bi-x-circle-fill me-1"></i> Vencida / Debe</span>
+                            {% else %}
+                                <span class="text-warning fw-bold small"><i class="bi bi-exclamation-triangle-fill me-1"></i> Suspendida</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small">{{ cliente.suscripcion_saas.fecha_vencimiento|date:"d/m/Y" }}</td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a href="{% url 'toggle_bloqueo' cliente.id %}" class="btn btn-sm {% if cliente.bloqueado %}btn-success{% else %}btn-outline-danger{% endif %}" title="Bloquear / Desbloquear">
+                                    <i class="bi {% if cliente.bloqueado %}bi-unlock-fill{% else %}bi-lock-fill{% endif %}"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalSuscripcion{{ cliente.id }}">
+                                    <i class="bi bi-pencil-square me-1"></i> Plan
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">No hay clientes registrados en el sistema SaaS.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

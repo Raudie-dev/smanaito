@@ -6,3 +6,6 @@ db.sqlite3
 .agents/
 .gemini/
 antigravity/
+
+# Variables de entorno – NUNCA subir al repo
+.env

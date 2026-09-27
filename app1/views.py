@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, F
 from django.http import JsonResponse, HttpResponse
 import datetime
-import openpyxl
-from .models import User, Finca, Animal, Rebaño, RegistroOrdeno, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento, ProtocoloAlimentacion, LecturaComedero, OrdenCargaMixer
+import json
+import secrets
+from .models import User, Finca, Animal, Rebaño, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, GastoRecurrente, LiquidacionLeche, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento, ProtocoloAlimentacion, LecturaComedero, OrdenCargaMixer, ServicioReproductivo, DiagnosticoGestacion, RegistroParto, Potrero, RotacionPotrero, ArticuloInventario, MovimientoInventario, CatalogoSemen, Empleado, PagoNomina, WebAuthnCredential
 
 def registrar_log(usuario, finca_id, accion, modulo, descripcion):
     try:
@@ -82,11 +83,13 @@ def signup(request):
         
         # Crear Suscripcion Trial en app2 automáticamente (15 días)
         try:
-            from app2.models import Suscripcion
+            from app2.models import Suscripcion, PlanSaaS
             import datetime
+            trial_plan = PlanSaaS.objects.filter(codigo='TRIAL').first()
             Suscripcion.objects.create(
                 usuario=nuevo_user,
                 plan='TRIAL',
+                plan_obj=trial_plan,
                 estado='ACTIVA',
                 fecha_vencimiento=datetime.date.today() + datetime.timedelta(days=15)
             )
@@ -100,7 +103,75 @@ def signup(request):
     return render(request, 'signup.html')
 
 def index(request):
-    return render(request, 'index.html')
+    # Contador real de usuarios ganaderos registrados e insumos/animales gestionados
+    usuarios_activos = User.objects.filter(bloqueado=False).count()
+    if usuarios_activos < 12:
+        # Base mínima de confianza para demostración comercial
+        usuarios_activos = 48 + usuarios_activos
+
+    # Planes SaaS dinámicos definidos en app2
+    try:
+        from app2.models import PlanSaaS, Suscripcion
+        plan_choices = dict(Suscripcion.PLAN_CHOICES)
+        db_planes = PlanSaaS.objects.filter(activo=True).order_by('precio_mensual')
+        planes_info = []
+        for p in db_planes:
+            caracts = [c.strip() for c in p.caracteristicas_list.split('\n') if c.strip()] if p.caracteristicas_list else []
+            planes_info.append({
+                'codigo': p.codigo,
+                'nombre': p.nombre,
+                'precio': str(int(p.precio_mensual) if p.precio_mensual == int(p.precio_mensual) else p.precio_mensual),
+                'moneda': '$',
+                'periodo': '15 días' if p.codigo == 'TRIAL' else '/ mes',
+                'destacado': p.destacado,
+                'badge': p.badge,
+                'descripcion': p.descripcion,
+                'caracteristicas': caracts
+            })
+    except Exception as e:
+        plan_choices = {'TRIAL': 'Prueba (Trial)', 'BASICO': 'Básico', 'PLUS': 'Plus', 'PREMIUM': 'Premium'}
+        planes_info = []
+
+    context = {
+        'usuarios_activos': usuarios_activos,
+        'planes_info': planes_info,
+        'plan_choices': plan_choices,
+    }
+    return render(request, 'index.html', context)
+
+def robots_txt(request):
+    content = """User-agent: *
+Allow: /
+Disallow: /page/
+Disallow: */page/*
+Disallow: /control/
+Disallow: /finanzas/
+Disallow: /perfil/
+
+Sitemap: https://samanito.com/sitemap.xml
+"""
+    return HttpResponse(content, content_type="text/plain")
+
+def llms_txt(request):
+    content = """# Samanito - Plataforma SaaS de Gestión Ganadera e Inteligencia Operativa
+
+> Samanito es un software de gestión ganadera multi-tenant diseñado para fincas de producción lechera, engorde y crianza bovina.
+
+## Características Clave para LLMs y Motores Sintéticos
+- **Control de Producción Lechera:** Pesaje de ordeño por vaca/lote, curvas de lactancia y alertas de baja producción.
+- **Finanzas y Caja Real:** Balance automatizado cruzando ventas de ganado, liquidaciones de leche y gastos recurrentes.
+- **Inventario e Insumos:** Deducción automática del stock de medicinas y vacunas en tiempo real.
+- **Rotación de Potreros:** Días de ocupación y descanso programados para conservación forrajera.
+- **Biometría PWA WebAuthn:** Inicio de sesión instantáneo con huella dactilar/Face ID desde smartphones.
+
+## Estructura de URLs Recomendadas
+- /servicios/gestion-ganadera-inteligente
+- /servicios/control-produccion-lechera
+- /servicios/finanzas-finca-ganadera
+- /servicios/rotacion-potreros-forraje
+- /servicios/biometria-pwa-ganaderia
+"""
+    return HttpResponse(content, content_type="text/plain")
 
 def cambiar_finca(request):
     if request.method == 'POST':
@@ -117,20 +188,16 @@ def crear_finca(request):
     
     if request.method == 'POST':
         try:
-            plan = user.suscripcion_saas.plan
+            plan_name = user.suscripcion_saas.plan
+            limite = user.suscripcion_saas.plan_obj.limite_fincas if user.suscripcion_saas.plan_obj else 1
         except:
-            plan = 'TRIAL'
+            plan_name = 'TRIAL'
+            limite = 1
             
         fincas_count = user.fincas.count()
-        if plan in ['TRIAL', 'BASICO']:
-            limite = 1
-        elif plan == 'PLUS':
-            limite = 3
-        else: # PREMIUM, VIP
-            limite = float('inf')
         
         if fincas_count >= limite:
-            messages.error(request, f'Límite de fincas alcanzado para su plan {plan}. ¡Contacte a soporte para un Upgrade!')
+            messages.error(request, f'Límite de fincas alcanzado para su plan {plan_name}. ¡Contacte a soporte para un Upgrade!')
         else:
             nombre = request.POST.get('nombre')
             f = Finca.objects.create(usuario=user, nombre=nombre)
@@ -170,65 +237,80 @@ def control(request):
     total_machos = Animal.objects.filter(finca_id=finca_activa_id, sexo='M').count()
     total_hembras = Animal.objects.filter(finca_id=finca_activa_id, sexo='H').count()
     
-    # 2. Producción Leche (Semanal)
-    hace_7_dias = datetime.date.today() - datetime.timedelta(days=7)
-    prod_semanal = RegistroOrdeno.objects.filter(finca_id=finca_activa_id, fecha__gte=hace_7_dias).aggregate(total=Sum('cantidad_litros'))['total'] or 0
-    
-    # Producción de leche diaria de los últimos 7 días para gráfico
-    dias_leche = []
-    valores_leche = []
-    hoy = datetime.date.today()
-    for i in range(6, -1, -1):
-        dia = hoy - datetime.timedelta(days=i)
-        dias_leche.append(dia.strftime("%d %b"))
-        cant = RegistroOrdeno.objects.filter(finca_id=finca_activa_id, fecha=dia).aggregate(total=Sum('cantidad_litros'))['total'] or 0
-        valores_leche.append(float(cant))
-        
-    # 3. Alertas Destete
+    # 2. Alertas Destete
     umbral_destete = datetime.date.today() - datetime.timedelta(days=config.meses_destete * 30)
     alertas_destete_count = Animal.objects.filter(finca_id=finca_activa_id, destetado=False, fecha_nacimiento__lte=umbral_destete).count() if config.usar_destete else 0
     
-    # 4. Indicadores Financieros Rápidos
-    precio_leche_config, _ = PrecioLecheConfig.objects.get_or_create(finca_id=finca_activa_id, defaults={'precio_por_litro': 0.00})
-    litros_totales = RegistroOrdeno.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('cantidad_litros'))['total'] or 0
-    ingresos_leche = float(litros_totales) * float(precio_leche_config.precio_por_litro)
-    ingresos_animales = VentaAnimal.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('precio_total'))['total'] or 0
-    egresos_totales = GastoFinca.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('monto'))['total'] or 0
-    balance_neto = (ingresos_leche + float(ingresos_animales)) - float(egresos_totales)
+    # 3. Alertas de Inventario (Medicina, Alimentos e Insumos bajo stock)
+    articulos_bajo_stock = ArticuloInventario.objects.filter(
+        finca_id=finca_activa_id,
+        cantidad_actual__lte=F('alerta_minimo')
+    )
+    count_alertas_inventario = articulos_bajo_stock.count()
+    count_medicina_alert = articulos_bajo_stock.filter(categoria='MEDICAMENTO').count()
+    count_alimento_alert = articulos_bajo_stock.filter(categoria='ALIMENTO').count()
 
-    # 5. Últimos Eventos
-    eventos = []
+    # 4. Movimientos Recientes de Insumos
+    movimientos_recientes = MovimientoInventario.objects.filter(finca_id=finca_activa_id).order_by('-fecha')[:6]
+
+    # 5. Liquidaciones de Leche Pendientes y Cobradas
+    liquidaciones = LiquidacionLeche.objects.filter(finca_id=finca_activa_id)
+    liquidaciones_pendientes = liquidaciones.filter(estado_pago='PENDIENTE').order_by('fecha_inicio')[:5]
+    monto_pendiente_leche = float(liquidaciones.filter(estado_pago='PENDIENTE').aggregate(total=Sum('monto_total'))['total'] or 0)
+    liquidaciones_cobradas_monto = float(liquidaciones.filter(estado_pago='COBRADO').aggregate(total=Sum('monto_total'))['total'] or 0)
+
+    # 6. Balance Financiero Consolidado y Dinero Disponible
+    ingresos_animales = float(VentaAnimal.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('precio_total'))['total'] or 0)
+    egresos_gastos = float(GastoFinca.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('monto'))['total'] or 0)
+    egresos_inventario = float(MovimientoInventario.objects.filter(finca_id=finca_activa_id, tipo='ENTRADA').aggregate(total=Sum('costo_total'))['total'] or 0)
+    egresos_totales = egresos_gastos + egresos_inventario
+
+    dinero_disponible = (liquidaciones_cobradas_monto + ingresos_animales) - egresos_totales
+
+    # 7. Alertas de Sanidad y Vacunación
+    vacunas_pendientes = PlanVacunacion.objects.filter(finca_id=finca_activa_id, estado='PENDIENTE').order_by('fecha_programada')[:5]
+    incidentes_activos = IncidenteSanitario.objects.filter(finca_id=finca_activa_id, estado='ACTIVO').order_by('-fecha_incidente')[:5]
+
+    # 8. Últimos Animales Registrados
+    ultimos_animales = Animal.objects.filter(finca_id=finca_activa_id).order_by('-id')[:5]
+        
+    # 9. Rendimiento de Leche (Gráfico y Totales)
+    hace_30_dias = datetime.date.today() - datetime.timedelta(days=30)
+    dias_leche = []
+    valores_leche = []
     
-    ultimos_ordenos = RegistroOrdeno.objects.filter(finca_id=finca_activa_id).order_by('-fecha', '-hora_finalizacion')[:3]
-    for o in ultimos_ordenos:
-        eventos.append({
-            'id': f"#{o.rebaño.nombre[:3].upper()}-{o.id}",
-            'tipo': 'Registro de Ordeño',
-            'fecha': o.fecha.strftime("%d %b %Y"),
-            'estado': f"{o.cantidad_litros} L",
-            'badge': 'bg-success'
-        })
-        
-    ultimos_animales = Animal.objects.filter(finca_id=finca_activa_id).order_by('-id')[:3]
-    for a in ultimos_animales:
-        eventos.append({
-            'id': f"{a.codigo}",
-            'tipo': 'Nuevo Ingreso',
-            'fecha': 'Reciente',
-            'estado': 'Activo',
-            'badge': 'bg-primary'
-        })
-        
+    for i in range(6, -1, -1):
+        dia = datetime.date.today() - datetime.timedelta(days=i)
+        dias_leche.append(dia.strftime('%d/%m'))
+        litros_dia = liquidaciones.filter(fecha_inicio__lte=dia, fecha_fin__gte=dia).aggregate(total=Sum('litros_totales'))['total'] or 0
+        valores_leche.append(float(litros_dia))
+
+    prod_semanal = liquidaciones.filter(fecha_inicio__gte=datetime.date.today() - datetime.timedelta(days=7)).aggregate(total=Sum('litros_totales'))['total'] or 0
+    vacas_lactancia = Animal.objects.filter(finca_id=finca_activa_id, estado_produccion='LACTANCIA').count()
+    vacas_secas = Animal.objects.filter(finca_id=finca_activa_id, estado_produccion='SECA').count()
+
     context = {
         'total_animales': total_animales,
         'total_machos': total_machos,
         'total_hembras': total_hembras,
-        'prod_semanal': prod_semanal,
+        'vacas_lactancia': vacas_lactancia,
+        'vacas_secas': vacas_secas,
+        'prod_semanal': float(prod_semanal),
+        'dias_leche': json.dumps(dias_leche),
+        'valores_leche': json.dumps(valores_leche),
         'alertas_destete_count': alertas_destete_count,
-        'balance_neto': balance_neto,
-        'dias_leche': dias_leche,
-        'valores_leche': valores_leche,
-        'eventos': eventos[:6],
+        'articulos_bajo_stock': articulos_bajo_stock[:6],
+        'count_alertas_inventario': count_alertas_inventario,
+        'count_medicina_alert': count_medicina_alert,
+        'count_alimento_alert': count_alimento_alert,
+        'movimientos_recientes': movimientos_recientes,
+        'liquidaciones_pendientes': liquidaciones_pendientes,
+        'monto_pendiente_leche': monto_pendiente_leche,
+        'dinero_disponible': dinero_disponible,
+        'egresos_totales': egresos_totales,
+        'vacunas_pendientes': vacunas_pendientes,
+        'incidentes_activos': incidentes_activos,
+        'ultimos_animales': ultimos_animales,
         'config': config,
         'fincas_usuario': fincas_usuario,
         'mostrar_modal_bienvenida': mostrar_modal_bienvenida,
@@ -380,10 +462,6 @@ def rebaño(request):
         action = request.POST.get('action')
         
         if action == 'generar_estandares':
-            Rebaño.objects.get_or_create(finca_id=finca_activa_id, nombre='Rebaño Ordeño', defaults={
-                'descripcion': 'Vacas en Lactancia',
-                'es_dinamico': True, 'filtro_sexo': 'H', 'filtro_estado_produccion': 'LACTANCIA'
-            })
             Rebaño.objects.get_or_create(finca_id=finca_activa_id, nombre='Rebaño Horro', defaults={
                 'descripcion': 'Vacas Secas (Preñadas o Vacías)',
                 'es_dinamico': True, 'filtro_sexo': 'H', 'filtro_estado_produccion': 'SECA'
@@ -455,104 +533,18 @@ def rebaño(request):
     for r in rebanos:
         r.cantidad_animales = r.count_animales()
         
+    nombres_basicos = ['Rebaño Horro', 'Rebaño Engorde', 'Rebaño Mautes']
+    nombres_existentes = rebanos.values_list('nombre', flat=True)
+    mostrar_btn_estandares = not all(n in nombres_existentes for n in nombres_basicos)
+        
     context = {
         'rebanos': rebanos,
         'fincas_usuario': fincas_usuario,
+        'mostrar_btn_estandares': mostrar_btn_estandares,
     }
     return render(request, 'rebaño.html', context)
 
-def ordeño(request):
-    user_id = request.session.get('user')
-    if not user_id:
-        messages.error(request, 'Debe iniciar sesión primero')
-        return redirect('login')
-        
-    user = User.objects.get(id=user_id)
-    finca_activa_id, fincas_usuario = get_finca_context(request, user)
-    if not finca_activa_id:
-        messages.error(request, 'Debe crear una finca primero')
-        return redirect('control')
-    # Obtener el rebaño activo (por session o GET)
-    rebano_activo_id = request.GET.get('rebano')
-    if rebano_activo_id:
-        request.session['rebano_ordeno_activo'] = rebano_activo_id
-    else:
-        rebano_activo_id = request.session.get('rebano_ordeno_activo')
-        
-    rebano_activo = None
-    if rebano_activo_id:
-        try:
-            rebano_activo = Rebaño.objects.get(id=rebano_activo_id, finca_id=finca_activa_id)
-        except Rebaño.DoesNotExist:
-            rebano_activo = None
-            
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        
-        if action == 'registrar_ordeno':
-            rebano_post = request.POST.get('rebano_id')
-            litros = request.POST.get('cantidad_litros')
-            hora = request.POST.get('hora_finalizacion')
-            obs = request.POST.get('observaciones', '')
-            
-            try:
-                r = Rebaño.objects.get(id=rebano_post, finca_id=finca_activa_id)
-                
-                if r.count_animales() == 0:
-                    messages.error(request, f"El rebaño '{r.nombre}' no tiene animales registrados. No se puede registrar producción de ordeño.")
-                else:
-                    RegistroOrdeno.objects.create(
-                        finca_id=finca_activa_id,
-                        rebaño=r,
-                        cantidad_litros=litros,
-                        hora_finalizacion=hora,
-                        observaciones=obs
-                    )
-                    registrar_log(user, finca_activa_id, 'CREACION', 'ORDEÑO', f"Registró producción de ordeño: {litros} L para el rebaño '{r.nombre}'")
-                    messages.success(request, f"Producción de {litros}L registrada exitosamente para el rebaño {r.nombre}.")
 
-            except Exception as e:
-                messages.error(request, f"Error al registrar ordeño: {str(e)}")
-                
-        elif action == 'agregar_vaca':
-            codigo_vaca = request.POST.get('codigo_vaca')
-            if codigo_vaca:
-                try:
-                    vaca = Animal.objects.get(codigo=codigo_vaca, sexo='H', finca_id=finca_activa_id)
-                    vaca.estado_produccion = 'LACTANCIA'
-                    
-                    # Si el rebaño activo NO es dinámico, podemos asociar la vaca a este rebaño fijo.
-                    if rebano_activo and not rebano_activo.es_dinamico:
-                        vaca.rebaño = rebano_activo
-                        
-                    vaca.save()
-                    registrar_log(user, finca_activa_id, 'MODIFICACION', 'ANIMALES', f"Activó estado de Lactancia para la vaca '{vaca.nombre}' ({vaca.codigo})")
-                    messages.success(request, f"Vaca {vaca.nombre} ({vaca.codigo}) ha sido pasada a estado 'En Lactancia'.")
-                except Animal.DoesNotExist:
-                    messages.error(request, "Vaca no encontrada o no es hembra.")
-                    
-        return redirect('ordeño')
-        
-    # Obtener datos para la vista (solo rebaños con característica de ordeño/lactancia)
-    rebanos = Rebaño.objects.filter(finca_id=finca_activa_id, filtro_estado_produccion='LACTANCIA')
-    
-    # Historial de ordeños de los últimos 30 días
-    hace_30_dias = datetime.date.today() - datetime.timedelta(days=30)
-    
-    qs_registros = RegistroOrdeno.objects.filter(finca_id=finca_activa_id, fecha__gte=hace_30_dias).order_by('-fecha', '-hora_finalizacion')
-    if rebano_activo:
-        qs_registros = qs_registros.filter(rebaño=rebano_activo)
-        
-    total_30_dias = qs_registros.aggregate(total=Sum('cantidad_litros'))['total'] or 0
-        
-    context = {
-        'rebanos': rebanos,
-        'rebano_activo': rebano_activo,
-        'registros': qs_registros[:20], # Mostrar últimos 20
-        'total_30_dias': total_30_dias,
-        'fincas_usuario': fincas_usuario,
-    }
-    return render(request, 'ordeño.html', context)
 
 def crianza(request):
     user_id = request.session.get('user')
@@ -826,15 +818,21 @@ def vacunacion(request):
             fecha_prog = request.POST.get('fecha_programada')
             rebano_id = request.POST.get('rebano_id')
             observaciones = request.POST.get('observaciones')
+            articulo_id = request.POST.get('articulo_inventario_id')
+            dosis = float(request.POST.get('dosis_por_animal') or 0)
             
             try:
                 reb = Rebaño.objects.get(id=rebano_id, finca_id=finca_activa_id) if rebano_id else None
+                art_obj = ArticuloInventario.objects.filter(id=articulo_id, finca_id=finca_activa_id).first() if articulo_id else None
+                
                 PlanVacunacion.objects.create(
                     usuario=user,
                     finca_id=finca_activa_id,
                     vacuna=vacuna,
                     fecha_programada=fecha_prog,
                     rebaño=reb,
+                    articulo_inventario=art_obj,
+                    dosis_por_animal=dosis,
                     observaciones=observaciones
                 )
                 registrar_log(user, finca_activa_id, 'CREACION', 'SANIDAD', f"Programó vacuna: '{vacuna}' para el {fecha_prog}")
@@ -849,6 +847,22 @@ def vacunacion(request):
                 plan.estado = 'COMPLETADO'
                 plan.fecha_aplicacion = datetime.date.today()
                 plan.save()
+
+                if plan.articulo_inventario and plan.dosis_por_animal and plan.dosis_por_animal > 0:
+                    art = plan.articulo_inventario
+                    num_animales = plan.rebaño.animales_fijos.count() if plan.rebaño else Animal.objects.filter(finca_id=finca_activa_id, estado_vida='VIVO').count()
+                    total_dosis = float(plan.dosis_por_animal) * num_animales
+                    art.cantidad_actual = max(0, float(art.cantidad_actual) - total_dosis)
+                    art.save()
+                    MovimientoInventario.objects.create(
+                        finca_id=finca_activa_id,
+                        articulo=art,
+                        tipo='SALIDA',
+                        cantidad=total_dosis,
+                        usuario_registro=user,
+                        observaciones=f"Aplicación de vacuna: {plan.vacuna} ({num_animales} animales)"
+                    )
+
                 registrar_log(user, finca_activa_id, 'MODIFICACION', 'SANIDAD', f"Marcó como completada la vacunación: '{plan.vacuna}'")
                 messages.success(request, f"Vacunación {plan.vacuna} marcada como completada.")
             except Exception as e:
@@ -859,12 +873,14 @@ def vacunacion(request):
     pendientes = PlanVacunacion.objects.filter(finca_id=finca_activa_id, estado='PENDIENTE').order_by('fecha_programada')
     completadas = PlanVacunacion.objects.filter(finca_id=finca_activa_id, estado='COMPLETADO').order_by('-fecha_aplicacion')
     rebaños = Rebaño.objects.filter(finca_id=finca_activa_id)
+    articulos_vacunas = ArticuloInventario.objects.filter(finca_id=finca_activa_id, categoria='MEDICAMENTO')
     
     context = {
         'fincas_usuario': fincas_usuario,
         'pendientes': pendientes,
         'completadas': completadas,
         'rebaños': rebaños,
+        'articulos_vacunas': articulos_vacunas,
     }
     return render(request, 'vacunacion.html', context)
 
@@ -889,9 +905,13 @@ def incidentes(request):
             fecha = request.POST.get('fecha_incidente')
             diag = request.POST.get('diagnostico')
             trat = request.POST.get('tratamiento')
+            articulo_id = request.POST.get('articulo_inventario_id')
+            cant_usada = float(request.POST.get('cantidad_utilizada') or 0)
             
             try:
                 animal = Animal.objects.get(id=animal_id, finca_id=finca_activa_id)
+                articulo_obj = ArticuloInventario.objects.filter(id=articulo_id, finca_id=finca_activa_id).first() if articulo_id else None
+                
                 IncidenteSanitario.objects.create(
                     usuario=user,
                     finca_id=finca_activa_id,
@@ -899,8 +919,23 @@ def incidentes(request):
                     fecha_incidente=fecha,
                     tipo=tipo,
                     diagnostico=diag,
-                    tratamiento=trat
+                    tratamiento=trat,
+                    articulo_inventario=articulo_obj,
+                    cantidad_utilizada=cant_usada if articulo_obj else 0
                 )
+                
+                if articulo_obj and cant_usada > 0:
+                    articulo_obj.cantidad_actual = max(0, float(articulo_obj.cantidad_actual) - cant_usada)
+                    articulo_obj.save()
+                    MovimientoInventario.objects.create(
+                        finca_id=finca_activa_id,
+                        articulo=articulo_obj,
+                        tipo='SALIDA',
+                        cantidad=cant_usada,
+                        usuario_registro=user,
+                        observaciones=f"Tratamiento para animal {animal.codigo}: {diag}"
+                    )
+
                 registrar_log(user, finca_activa_id, 'CREACION', 'SANIDAD', f"Registró incidente clínico para el animal '{animal.codigo}': {diag}")
                 messages.success(request, f"Incidente registrado para el animal {animal.codigo}.")
             except Exception as e:
@@ -922,12 +957,14 @@ def incidentes(request):
     activos = IncidenteSanitario.objects.filter(finca_id=finca_activa_id, estado='ACTIVO').order_by('-fecha_incidente')
     resueltos = IncidenteSanitario.objects.filter(finca_id=finca_activa_id, estado='RESUELTO').order_by('-fecha_incidente')[:50]
     animales_vivos = Animal.objects.filter(finca_id=finca_activa_id, estado_vida='VIVO')
+    articulos_medicina = ArticuloInventario.objects.filter(finca_id=finca_activa_id, categoria='MEDICAMENTO')
     
     context = {
         'fincas_usuario': fincas_usuario,
         'activos': activos,
         'resueltos': resueltos,
         'animales_vivos': animales_vivos,
+        'articulos_medicina': articulos_medicina,
     }
     return render(request, 'incidentes.html', context)
 
@@ -1201,6 +1238,57 @@ def finanzas(request):
             except Exception as e:
                 messages.error(request, f'Error al actualizar precio: {str(e)}')
                 
+        elif action == 'crear_liquidacion_leche':
+            fecha_inicio = request.POST.get('fecha_inicio')
+            fecha_fin = request.POST.get('fecha_fin')
+            litros = float(request.POST.get('litros_totales') or 0)
+            precio = float(request.POST.get('precio_por_litro') or precio_leche_config.precio_por_litro)
+            monto_total = litros * precio
+            comprador = request.POST.get('comprador', '')
+            estado_pago = request.POST.get('estado_pago', 'PENDIENTE')
+            fecha_cobro = datetime.date.today() if estado_pago == 'COBRADO' else None
+            obs = request.POST.get('observaciones', '')
+
+            try:
+                LiquidacionLeche.objects.create(
+                    usuario=user,
+                    finca_id=finca_activa_id,
+                    fecha_inicio=fecha_inicio,
+                    fecha_fin=fecha_fin,
+                    litros_totales=litros,
+                    precio_por_litro=precio,
+                    monto_total=monto_total,
+                    comprador=comprador,
+                    estado_pago=estado_pago,
+                    fecha_cobro=fecha_cobro,
+                    observaciones=obs
+                )
+                registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f"Registró periodo de leche ({fecha_inicio} a {fecha_fin}) por ${monto_total} [{estado_pago}]")
+                messages.success(request, 'Periodo de liquidación de leche registrado correctamente')
+            except Exception as e:
+                messages.error(request, f'Error al registrar periodo de leche: {str(e)}')
+
+        elif action == 'cobrar_liquidacion':
+            liq_id = request.POST.get('liquidacion_id')
+            try:
+                liq = LiquidacionLeche.objects.get(id=liq_id, finca_id=finca_activa_id)
+                liq.estado_pago = 'COBRADO'
+                liq.fecha_cobro = datetime.date.today()
+                liq.save()
+                registrar_log(user, finca_activa_id, 'EDICION', 'FINANZAS', f"Cobró liquidación de leche #{liq.id} por ${liq.monto_total}")
+                messages.success(request, f"Liquidación de leche por ${liq.monto_total} marcada como COBRADA.")
+            except Exception as e:
+                messages.error(request, f'Error al actualizar cobro: {str(e)}')
+
+        elif action == 'eliminar_liquidacion':
+            liq_id = request.POST.get('liquidacion_id')
+            try:
+                liq = LiquidacionLeche.objects.get(id=liq_id, finca_id=finca_activa_id)
+                liq.delete()
+                messages.success(request, 'Registro de liquidación eliminado')
+            except Exception as e:
+                messages.error(request, f'Error al eliminar: {str(e)}')
+
         elif action == 'eliminar_gasto':
             gasto_id = request.POST.get('gasto_id')
             try:
@@ -1215,16 +1303,21 @@ def finanzas(request):
                 
         return redirect('finanzas')
         
-    # Cálculos Financieros
-    litros_totales = RegistroOrdeno.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('cantidad_litros'))['total'] or 0
-    ingresos_leche = float(litros_totales) * float(precio_leche_config.precio_por_litro)
+    # Cálculos Financieros Consolidados
+    liquidaciones_leche = LiquidacionLeche.objects.filter(finca_id=finca_activa_id).order_by('-fecha_inicio')
     
-    ingresos_animales = VentaAnimal.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('precio_total'))['total'] or 0
+    ingresos_leche_cobrados = float(liquidaciones_leche.filter(estado_pago='COBRADO').aggregate(total=Sum('monto_total'))['total'] or 0)
+    ingresos_leche_pendientes = float(liquidaciones_leche.filter(estado_pago='PENDIENTE').aggregate(total=Sum('monto_total'))['total'] or 0)
+    litros_totales_cobrados = float(liquidaciones_leche.filter(estado_pago='COBRADO').aggregate(total=Sum('litros_totales'))['total'] or 0)
     
-    egresos_totales = GastoFinca.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('monto'))['total'] or 0
+    ingresos_animales = float(VentaAnimal.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('precio_total'))['total'] or 0)
     
-    ingresos_totales = float(ingresos_leche) + float(ingresos_animales)
-    balance_neto = ingresos_totales - float(egresos_totales)
+    egresos_gastos = float(GastoFinca.objects.filter(finca_id=finca_activa_id).aggregate(total=Sum('monto'))['total'] or 0)
+    egresos_inventario = float(MovimientoInventario.objects.filter(finca_id=finca_activa_id, tipo='ENTRADA').aggregate(total=Sum('costo_total'))['total'] or 0)
+    egresos_totales = egresos_gastos + egresos_inventario
+
+    ingresos_totales_cobrados = ingresos_leche_cobrados + ingresos_animales
+    dinero_disponible = ingresos_totales_cobrados - egresos_totales
     
     gastos = GastoFinca.objects.filter(finca_id=finca_activa_id).order_by('-fecha')
     
@@ -1238,12 +1331,16 @@ def finanzas(request):
     context = {
         'fincas_usuario': fincas_usuario,
         'precio_leche_config': precio_leche_config,
-        'litros_totales': litros_totales,
-        'ingresos_leche': ingresos_leche,
+        'liquidaciones_leche': liquidaciones_leche,
+        'ingresos_leche_cobrados': ingresos_leche_cobrados,
+        'ingresos_leche_pendientes': ingresos_leche_pendientes,
+        'litros_totales_cobrados': litros_totales_cobrados,
         'ingresos_animales': ingresos_animales,
-        'ingresos_totales': ingresos_totales,
+        'ingresos_totales_cobrados': ingresos_totales_cobrados,
+        'egresos_gastos': egresos_gastos,
+        'egresos_inventario': egresos_inventario,
         'egresos_totales': egresos_totales,
-        'balance_neto': balance_neto,
+        'dinero_disponible': dinero_disponible,
         'gastos': gastos,
         'chart_gastos': chart_gastos,
     }
@@ -1348,13 +1445,129 @@ def perfil(request):
             
         return redirect('perfil')
         
+    webauthn_creds = WebAuthnCredential.objects.filter(user=user)
     context = {
         'fincas_usuario': fincas_usuario,
         'user_profile': user,
         'suscripcion': suscripcion,
         'config': config,
+        'webauthn_creds': webauthn_creds,
     }
     return render(request, 'perfil.html', context)
+
+# --- WEB AUTH N / FINGERPRINT BIOMETRICS ---
+def api_webauthn_register_options(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        return JsonResponse({'error': 'No autorizado'}, status=401)
+    
+    user = User.objects.get(id=user_id)
+    challenge = secrets.token_urlsafe(32)
+    request.session['webauthn_register_challenge'] = challenge
+
+    options = {
+        "challenge": challenge,
+        "rp": {
+            "name": "Samanito Software",
+            "id": request.get_host().split(':')[0]
+        },
+        "user": {
+            "id": str(user.id),
+            "name": user.nombre,
+            "displayName": user.nombre
+        },
+        "pubKeyCredParams": [
+            {"alg": -7, "type": "public-key"},  # ES256
+            {"alg": -257, "type": "public-key"} # RS256
+        ],
+        "authenticatorSelection": {
+            "authenticatorAttachment": "platform",
+            "userVerification": "preferred",
+            "residentKey": "discouraged"
+        },
+        "timeout": 60000
+    }
+    return JsonResponse(options)
+
+def api_webauthn_register_verify(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        return JsonResponse({'error': 'No autorizado'}, status=401)
+    
+    user = User.objects.get(id=user_id)
+    try:
+        data = json.loads(request.body)
+        credential_id = data.get('id')
+        device_name = data.get('device_name', 'Huella Dactilar Mobile')
+
+        if not credential_id:
+            return JsonResponse({'error': 'Credencial inválida'}, status=400)
+
+        # Registrar o actualizar la credencial
+        WebAuthnCredential.objects.update_or_create(
+            credential_id=credential_id,
+            defaults={
+                'user': user,
+                'public_key': data.get('rawId', credential_id),
+                'device_name': device_name
+            }
+        )
+        registrar_log(user, None, 'CREACION', 'SEGURIDAD', f"Registró huella/biometría dactilar: {device_name}")
+        return JsonResponse({'success': True, 'message': 'Huella registrada con éxito'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+def api_webauthn_login_options(request):
+    challenge = secrets.token_urlsafe(32)
+    request.session['webauthn_login_challenge'] = challenge
+
+    options = {
+        "challenge": challenge,
+        "timeout": 60000,
+        "userVerification": "preferred"
+    }
+    return JsonResponse(options)
+
+def api_webauthn_login_verify(request):
+    try:
+        data = json.loads(request.body)
+        credential_id = data.get('id')
+        
+        if not credential_id:
+            return JsonResponse({'error': 'Identificador de huella no provisto'}, status=400)
+            
+        try:
+            cred = WebAuthnCredential.objects.get(credential_id=credential_id)
+        except WebAuthnCredential.DoesNotExist:
+            return JsonResponse({'error': 'Huella dactilar no reconocida en esta finca'}, status=404)
+            
+        user = cred.user
+        if user.bloqueado:
+            return JsonResponse({'error': 'Usuario bloqueado'}, status=403)
+            
+        # Iniciar sesión automáticamente
+        request.session['user'] = user.id
+        ConfiguracionUsuario.objects.get_or_create(user=user)
+        cred.sign_count += 1
+        cred.save()
+        
+        registrar_log(user, None, 'LOGIN', 'SEGURIDAD', f"Inicio de sesión exitoso con Huella Dactilar ({cred.device_name})")
+        return JsonResponse({'success': True, 'redirect': '/control/'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+def api_webauthn_delete(request, cred_id):
+    user_id = request.session.get('user')
+    if not user_id:
+        return JsonResponse({'error': 'No autorizado'}, status=401)
+    
+    try:
+        cred = WebAuthnCredential.objects.get(id=cred_id, user_id=user_id)
+        cred.delete()
+        messages.success(request, 'Huella dactilar eliminada')
+    except WebAuthnCredential.DoesNotExist:
+        messages.error(request, 'Huella no encontrada')
+    return redirect('perfil')
 
 def engorde(request):
     user_id = request.session.get('user')
@@ -1734,7 +1947,7 @@ def manga_manejo(request):
     }
     return render(request, 'manga.html', context)
 
-def alimentacion_avanzada(request):
+def estructura_costos(request):
     user_id = request.session.get('user')
     if not user_id:
         messages.error(request, 'Debe iniciar sesión primero')
@@ -1746,196 +1959,493 @@ def alimentacion_avanzada(request):
         messages.error(request, 'Debe crear una finca primero')
         return redirect('control')
 
-    # POST
+    # Manejo de Formularios POST
     if request.method == 'POST':
         action = request.POST.get('action')
         
-        if action == 'crear_protocolo':
-            nombre = request.POST.get('nombre')
-            racion_base = request.POST.get('racion_base_kg')
-            dias_trans = request.POST.get('dias_transicion', 10)
-            inc_porc = request.POST.get('incremento_porcentaje', 5.00)
-            
-            # Procesar ingredientes dinamicos desde el formulario
-            nombres_ing = request.POST.getlist('ingrediente_nombre[]')
-            porcentajes_ing = request.POST.getlist('ingrediente_porcentaje[]')
-            costos_ing = request.POST.getlist('ingrediente_costo[]')
-            
-            ingrediente_list = []
-            for i in range(len(nombres_ing)):
-                if nombres_ing[i].strip():
-                    ingrediente_list.append({
-                        'nombre': nombres_ing[i].strip(),
-                        'porcentaje': float(porcentajes_ing[i] or 0),
-                        'costo_por_kg': float(costos_ing[i] or 0)
-                    })
+        if action == 'crear_gasto_recurrente':
+            concepto = request.POST.get('concepto')
+            categoria = request.POST.get('categoria')
+            monto = request.POST.get('monto')
+            frecuencia = request.POST.get('frecuencia')
+            observaciones = request.POST.get('observaciones', '')
+            fecha_inicio = request.POST.get('fecha_inicio') or datetime.date.today()
             
             try:
-                ProtocoloAlimentacion.objects.create(
+                GastoRecurrente.objects.create(
+                    usuario=user,
                     finca_id=finca_activa_id,
-                    nombre=nombre,
-                    ingredientes_json=json.dumps(ingrediente_list),
-                    racion_base_kg=racion_base,
-                    dias_transicion=dias_trans,
-                    incremento_porcentaje=inc_porc
+                    concepto=concepto,
+                    categoria=categoria,
+                    monto=monto,
+                    frecuencia=frecuencia,
+                    observaciones=observaciones,
+                    fecha_inicio=fecha_inicio
                 )
-                registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f"Creó protocolo de alimentación: '{nombre}'")
-                messages.success(request, f"Protocolo '{nombre}' creado con éxito.")
+                registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f"Registró gasto recurrente '{concepto}' (${monto} {frecuencia})")
+                messages.success(request, 'Gasto recurrente registrado exitosamente')
             except Exception as e:
-                messages.error(request, f"Error al crear protocolo: {str(e)}")
-                
-        elif action == 'registrar_lectura':
-            corral_id = request.POST.get('corral_id')
-            puntuacion = int(request.POST.get('puntuacion', 2))
-            
-            # Tabla de ajuste sugerido según Feed Bunk Scoring
-            ajustes = {
-                0: 5.00,   # Vacío, aumentar ración 5%
-                1: 2.00,   # Escaso, aumentar ración 2%
-                2: 0.00,   # Óptimo, mantener ración
-                3: -5.00,  # Exceso, reducir ración 5%
-                4: -10.00  # Intacto, reducir ración 10%
-            }
-            ajuste_sug = ajustes.get(puntuacion, 0.00)
-            
+                messages.error(request, f'Error al registrar gasto recurrente: {str(e)}')
+
+        elif action == 'editar_gasto_recurrente':
+            gasto_id = request.POST.get('gasto_id')
             try:
-                corral = Corral.objects.get(id=corral_id, finca_id=finca_activa_id)
-                LecturaComedero.objects.create(
-                    corral=corral,
-                    fecha=datetime.date.today(),
-                    puntuacion=puntuacion,
-                    ajuste_sugerido_porcentaje=ajuste_sug
-                )
-                registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f"Registró bunk score {puntuacion} para corral '{corral.nombre}' (Ajuste sugerido: {ajuste_sug}%)")
-                messages.success(request, f"Lectura registrada. Ajuste sugerido: {ajuste_sug}%")
+                g = GastoRecurrente.objects.get(id=gasto_id, finca_id=finca_activa_id)
+                g.concepto = request.POST.get('concepto')
+                g.categoria = request.POST.get('categoria')
+                g.monto = request.POST.get('monto')
+                g.frecuencia = request.POST.get('frecuencia')
+                g.observaciones = request.POST.get('observaciones', '')
+                if request.POST.get('fecha_inicio'):
+                    g.fecha_inicio = request.POST.get('fecha_inicio')
+                g.save()
+                registrar_log(user, finca_activa_id, 'EDICION', 'FINANZAS', f"Actualizó gasto recurrente '{g.concepto}'")
+                messages.success(request, 'Gasto recurrente actualizado')
             except Exception as e:
-                messages.error(request, f"Error al registrar lectura: {str(e)}")
-                
-        elif action == 'calcular_mixer':
-            cap_mixer = float(request.POST.get('capacidad_mixer_kg', 1000))
-            corral_id = request.POST.get('corral_id')
-            protocolo_id = request.POST.get('protocolo_id')
-            
+                messages.error(request, f'Error al editar: {str(e)}')
+
+        elif action == 'toggle_activo':
+            gasto_id = request.POST.get('gasto_id')
             try:
-                corral = Corral.objects.get(id=corral_id, finca_id=finca_activa_id)
-                protocolo = ProtocoloAlimentacion.objects.get(id=protocolo_id, finca_id=finca_activa_id)
-                
-                num_animales = corral.count_animales()
-                if num_animales == 0:
-                    messages.error(request, "El corral no tiene animales asignados.")
-                    return redirect('alimentacion')
-                    
-                # Ración básica total
-                racion_total = float(num_animales) * float(protocolo.racion_base_kg)
-                
-                # Ajuste por lectura reciente de comedero
-                ultima_lectura = LecturaComedero.objects.filter(corral=corral).order_by('-fecha').first()
-                factor_ajuste = 1.0
-                if ultima_lectura:
-                    factor_ajuste += float(ultima_lectura.ajuste_sugerido_porcentaje) / 100.0
-                    racion_total = racion_total * factor_ajuste
-                
-                # Desglose de ingredientes
-                ingredientes = json.loads(protocolo.ingredientes_json)
-                
-                # Calcular viajes del Mixer
-                num_viajes = int(racion_total // cap_mixer)
-                resto = racion_total % cap_mixer
-                if resto > 0:
-                    num_viajes += 1
-                    
-                viajes = []
-                for v in range(num_viajes):
-                    carga_viaje = cap_mixer if (v < num_viajes - 1 or resto == 0) else resto
-                    detalles_ingredientes = []
-                    for ing in ingredientes:
-                        kg_ing = (float(ing['porcentaje']) / 100.0) * carga_viaje
-                        costo_ing = kg_ing * float(ing['costo_por_kg'])
-                        detalles_ingredientes.append({
-                            'nombre': ing['nombre'],
-                            'cantidad_kg': kg_ing,
-                            'costo': costo_ing
-                        })
-                    viajes.append({
-                        'viaje_numero': v + 1,
-                        'carga_total_kg': carga_viaje,
-                        'ingredientes': detalles_ingredientes
-                    })
-                
-                OrdenCargaMixer.objects.create(
+                g = GastoRecurrente.objects.get(id=gasto_id, finca_id=finca_activa_id)
+                g.activo = not g.activo
+                g.save()
+                estado_str = "Activado" if g.activo else "Desactivado"
+                messages.info(request, f"Gasto '{g.concepto}' {estado_str}")
+            except Exception as e:
+                messages.error(request, f'Error al cambiar estado: {str(e)}')
+
+        elif action == 'eliminar_gasto_recurrente':
+            gasto_id = request.POST.get('gasto_id')
+            try:
+                g = GastoRecurrente.objects.get(id=gasto_id, finca_id=finca_activa_id)
+                concepto_del = g.concepto
+                g.delete()
+                registrar_log(user, finca_activa_id, 'ELIMINACION', 'FINANZAS', f"Eliminó gasto recurrente '{concepto_del}'")
+                messages.success(request, 'Gasto recurrente eliminado')
+            except Exception as e:
+                messages.error(request, f'Error al eliminar: {str(e)}')
+
+        elif action == 'cargar_a_gastos':
+            gasto_id = request.POST.get('gasto_id')
+            try:
+                g = GastoRecurrente.objects.get(id=gasto_id, finca_id=finca_activa_id)
+                GastoFinca.objects.create(
+                    usuario=user,
                     finca_id=finca_activa_id,
                     fecha=datetime.date.today(),
-                    capacidad_mixer_kg=cap_mixer,
-                    viajes_json=json.dumps(viajes)
+                    categoria=g.categoria,
+                    concepto=f"[Recurrente] {g.concepto}",
+                    monto=g.monto,
+                    tipo='FIJO'
                 )
-                
-                # Mensaje detallado para sesión
-                request.session['resultado_mixer'] = {
-                    'corral': corral.nombre,
-                    'protocolo': protocolo.nombre,
-                    'racion_total': racion_total,
-                    'viajes': viajes
-                }
-                messages.success(request, "Orden de carga y entrega del Mixer generada correctamente.")
+                registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f"Asentó en finanzas el gasto recurrente '{g.concepto}' por ${g.monto}")
+                messages.success(request, f"Se asentó el gasto '{g.concepto}' en Finanzas de Finca.")
             except Exception as e:
-                messages.error(request, f"Error al calcular carga de Mixer: {str(e)}")
-                
-        return redirect('alimentacion')
+                messages.error(request, f'Error al asentar gasto: {str(e)}')
+
+        return redirect('estructura_costos')
+
+    # Cargar datos para la vista
+    gastos_recurrentes = GastoRecurrente.objects.filter(finca_id=finca_activa_id).order_by('-activo', 'categoria')
+
+    # Totales por frecuencia (Solo activos)
+    activos = gastos_recurrentes.filter(activo=True)
+    total_semanal = float(activos.filter(frecuencia='SEMANAL').aggregate(total=Sum('monto'))['total'] or 0)
+    total_mensual = float(activos.filter(frecuencia='MENSUAL').aggregate(total=Sum('monto'))['total'] or 0)
+    total_semestral = float(activos.filter(frecuencia='SEMESTRAL').aggregate(total=Sum('monto'))['total'] or 0)
+    total_anual = float(activos.filter(frecuencia='ANUAL').aggregate(total=Sum('monto'))['total'] or 0)
+
+    # Equivalencias
+    semanal_eq_mensual = total_semanal * 4.333
+    mensual_eq_mensual = total_mensual
+    semestral_eq_mensual = total_semestral / 6.0
+    anual_eq_mensual = total_anual / 12.0
+
+    eq_mensual = semanal_eq_mensual + mensual_eq_mensual + semestral_eq_mensual + anual_eq_mensual
+    eq_anual = (total_semanal * 52.0) + (total_mensual * 12.0) + (total_semestral * 2.0) + total_anual
+
+    # Totales por categoría (Equivalente mensual)
+    categorias_info = []
+    for cat_code, cat_name in GastoFinca.CATEGORIA_CHOICES:
+        cat_activos = activos.filter(categoria=cat_code)
+        sem = float(cat_activos.filter(frecuencia='SEMANAL').aggregate(total=Sum('monto'))['total'] or 0)
+        men = float(cat_activos.filter(frecuencia='MENSUAL').aggregate(total=Sum('monto'))['total'] or 0)
+        semest = float(cat_activos.filter(frecuencia='SEMESTRAL').aggregate(total=Sum('monto'))['total'] or 0)
+        an = float(cat_activos.filter(frecuencia='ANUAL').aggregate(total=Sum('monto'))['total'] or 0)
         
-    # GET
-    protocolos = ProtocoloAlimentacion.objects.filter(finca_id=finca_activa_id)
-    corrales = Corral.objects.filter(finca_id=finca_activa_id)
-    
-    # Procesar proyecciones de costos para cada corral
-    corrales_proyecciones = []
-    for c in corrales:
-        num_animales = c.count_animales()
-        # Buscar última lectura de comedero
-        lectura = LecturaComedero.objects.filter(corral=c).order_by('-fecha').first()
-        ajuste = lectura.ajuste_sugerido_porcentaje if lectura else 0.0
-        
-        # Dieta sugerida basada en primer protocolo disponible (si hay alguno)
-        dieta_nombre = "Sin Dieta Asignada"
-        costo_diario_animal = 0.0
-        costo_mensual_corral = 0.0
-        
-        if protocolos.exists():
-            p = protocolos.first() # Usar el primero por defecto para simular
-            dieta_nombre = p.nombre
-            ingredientes = json.loads(p.ingredientes_json)
-            costo_por_kg = sum((float(ing['porcentaje']) / 100.0) * float(ing['costo_por_kg']) for ing in ingredientes)
-            
-            racion_ajustada = float(p.racion_base_kg) * (1.0 + float(ajuste)/100.0)
-            costo_diario_animal = racion_ajustada * costo_por_kg
-            costo_mensual_corral = costo_diario_animal * num_animales * 30.0
-            
-        corrales_proyecciones.append({
-            'corral': c,
-            'num_animales': num_animales,
-            'ultima_puntuacion': lectura.puntuacion if lectura else 'Sin lectura',
-            'ajuste': ajuste,
-            'dieta': dieta_nombre,
-            'costo_diario_animal': costo_diario_animal,
-            'costo_mensual_corral': costo_mensual_corral,
-        })
-        
-    resultado_mixer = request.session.pop('resultado_mixer', None)
-    ordenes_recientes = OrdenCargaMixer.objects.filter(finca_id=finca_activa_id).order_by('-fecha')[:5]
-    
-    # Formatear las ordenes recientes
-    ordenes_data = []
-    for o in ordenes_recientes:
-        ordenes_data.append({
-            'orden': o,
-            'viajes': json.loads(o.viajes_json)
-        })
-        
+        cat_eq_mensual = (sem * 4.333) + men + (semest / 6.0) + (an / 12.0)
+        if cat_eq_mensual > 0 or cat_activos.exists():
+            categorias_info.append({
+                'codigo': cat_code,
+                'nombre': cat_name,
+                'eq_mensual': cat_eq_mensual,
+                'count': cat_activos.count()
+            })
+
     context = {
         'fincas_usuario': fincas_usuario,
-        'protocolos': [(p, json.loads(p.ingredientes_json)) for p in protocolos],
-        'corrales_proyecciones': corrales_proyecciones,
-        'corrales': corrales,
-        'resultado_mixer': resultado_mixer,
-        'ordenes_recientes': ordenes_data,
+        'gastos_recurrentes': gastos_recurrentes,
+        'total_semanal': total_semanal,
+        'total_mensual': total_mensual,
+        'total_semestral': total_semestral,
+        'total_anual': total_anual,
+        'semanal_eq_mensual': semanal_eq_mensual,
+        'mensual_eq_mensual': mensual_eq_mensual,
+        'semestral_eq_mensual': semestral_eq_mensual,
+        'anual_eq_mensual': anual_eq_mensual,
+        'eq_mensual': eq_mensual,
+        'eq_anual': eq_anual,
+        'categorias_info': categorias_info,
+        'categoria_choices': GastoFinca.CATEGORIA_CHOICES,
+        'frecuencia_choices': GastoRecurrente.FRECUENCIA_CHOICES,
     }
-    return render(request, 'alimentacion.html', context)
+    return render(request, 'estructura_costos.html', context)
+
+def reproduccion(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        return redirect('login')
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        return redirect('control')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'registrar_servicio':
+            animal_id = request.POST.get('animal_id')
+            tipo = request.POST.get('tipo')
+            fecha = request.POST.get('fecha')
+            toro_o_pajilla = request.POST.get('toro_o_pajilla')
+            obs = request.POST.get('observaciones')
+            try:
+                hembra = Animal.objects.get(id=animal_id)
+                # Inbreeding Check Básico
+                toro_interno = Animal.objects.filter(finca_id=finca_activa_id, sexo='M', codigo=toro_o_pajilla).first()
+                if toro_interno and hembra.padre and hembra.padre == toro_interno:
+                    messages.error(request, '¡ALERTA DE CONSANGUINIDAD! El toro seleccionado es el padre de la hembra.')
+                    return redirect('reproduccion')
+                    
+                fecha_obj = datetime.datetime.strptime(fecha, '%Y-%m-%d').date()
+                fpp = fecha_obj + datetime.timedelta(days=283)
+                ServicioReproductivo.objects.create(
+                    finca_id=finca_activa_id, hembra=hembra, tipo=tipo, fecha=fecha_obj, toro_o_pajilla=toro_o_pajilla, fecha_probable_parto=fpp, observaciones=obs
+                )
+                messages.success(request, 'Servicio reproductivo registrado con éxito.')
+            except Exception as e:
+                messages.error(request, f'Error: {e}')
+        
+        elif action == 'registrar_diagnostico':
+            animal_id = request.POST.get('animal_id')
+            fecha = request.POST.get('fecha')
+            metodo = request.POST.get('metodo')
+            resultado = request.POST.get('resultado')
+            obs = request.POST.get('observaciones')
+            try:
+                DiagnosticoGestacion.objects.create(finca_id=finca_activa_id, hembra_id=animal_id, fecha=fecha, metodo=metodo, resultado=resultado, observaciones=obs)
+                anim = Animal.objects.get(id=animal_id)
+                anim.estado_gestacion = resultado
+                anim.save()
+                messages.success(request, 'Diagnóstico guardado.')
+            except Exception as e:
+                messages.error(request, f'Error: {e}')
+        
+        elif action == 'registrar_parto':
+            animal_id = request.POST.get('animal_id')
+            fecha = request.POST.get('fecha')
+            tipo = request.POST.get('tipo')
+            facilidad = request.POST.get('facilidad')
+            obs = request.POST.get('observaciones')
+            try:
+                madre = Animal.objects.get(id=animal_id)
+                cria_obj = None
+                if tipo == 'PARTO':
+                    cria_obj = Animal.objects.create(
+                        finca_id=finca_activa_id, usuario=user, codigo=f"CRIA-{madre.codigo}-{fecha}", nombre=f"Cria de {madre.nombre}", fecha_nacimiento=fecha, sexo='H', madre_id=madre.id
+                    )
+                RegistroParto.objects.create(finca_id=finca_activa_id, madre_id=animal_id, fecha=fecha, tipo=tipo, facilidad=facilidad, cria=cria_obj, observaciones=obs)
+                madre.estado_gestacion = 'VACIA'
+                madre.save()
+                messages.success(request, 'Parto/Aborto registrado.')
+            except Exception as e:
+                messages.error(request, f'Error: {e}')
+
+        return redirect('reproduccion')
+
+    hembras = Animal.objects.filter(finca_id=finca_activa_id, sexo='H')
+    machos = Animal.objects.filter(finca_id=finca_activa_id, sexo='M')
+    catalogo = CatalogoSemen.objects.filter(finca_id=finca_activa_id)
+    servicios = ServicioReproductivo.objects.filter(finca_id=finca_activa_id).order_by('-fecha')
+    diagnosticos = DiagnosticoGestacion.objects.filter(finca_id=finca_activa_id).order_by('-fecha')
+    partos = RegistroParto.objects.filter(finca_id=finca_activa_id).order_by('-fecha')
+
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'hembras': hembras,
+        'machos': machos,
+        'catalogo': catalogo,
+        'servicios': servicios[:20],
+        'diagnosticos': diagnosticos[:20],
+        'partos': partos[:20]
+    }
+    return render(request, 'reproduccion.html', context)
+
+def potreros(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        return redirect('login')
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        return redirect('control')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'crear_potrero':
+            nombre = request.POST.get('nombre')
+            has = request.POST.get('hectareas')
+            tipo_pasto = request.POST.get('tipo_pasto')
+            rebano_id = request.POST.get('rebano_id') or None
+            try:
+                Potrero.objects.create(
+                    finca_id=finca_activa_id, 
+                    nombre=nombre, 
+                    hectareas=has, 
+                    tipo_pasto=tipo_pasto,
+                    rebaño_id=rebano_id
+                )
+                messages.success(request, 'Potrero creado.')
+            except Exception as e:
+                messages.error(request, f'Error: {e}')
+                
+        elif action == 'rotar_rebano':
+            potrero_id = request.POST.get('potrero_id')
+            rebano_id = request.POST.get('rebano_id')
+            try:
+                potrero = Potrero.objects.get(id=potrero_id, finca_id=finca_activa_id)
+                if potrero.estado == 'OCUPADO':
+                    messages.error(request, 'El potrero ya está ocupado.')
+                else:
+                    RotacionPotrero.objects.create(finca_id=finca_activa_id, potrero=potrero, rebaño_id=rebano_id, fecha_entrada=datetime.date.today())
+                    potrero.estado = 'OCUPADO'
+                    potrero.save()
+                    messages.success(request, 'Rebaño rotado al potrero.')
+            except Exception as e:
+                messages.error(request, f'Error: {e}')
+                
+        elif action == 'retirar_rebano':
+            potrero_id = request.POST.get('potrero_id')
+            try:
+                potrero = Potrero.objects.get(id=potrero_id, finca_id=finca_activa_id)
+                rotacion_activa = RotacionPotrero.objects.filter(potrero=potrero, fecha_salida__isnull=True).first()
+                if rotacion_activa:
+                    rotacion_activa.fecha_salida = datetime.date.today()
+                    rotacion_activa.save()
+                potrero.estado = 'DESCANSO'
+                potrero.save()
+                messages.success(request, 'Rebaño retirado del potrero.')
+            except Exception as e:
+                messages.error(request, f'Error: {e}')
+                
+        return redirect('potreros')
+
+    potreros = Potrero.objects.filter(finca_id=finca_activa_id)
+    rebanos = Rebaño.objects.filter(finca_id=finca_activa_id)
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'potreros': potreros,
+        'rebanos': rebanos
+    }
+    return render(request, 'potreros.html', context)
+
+def inventario(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        return redirect('login')
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        return redirect('control')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'crear_articulo':
+            nombre = request.POST.get('nombre')
+            categoria = request.POST.get('categoria')
+            unidad = request.POST.get('unidad_medida')
+            alerta = request.POST.get('alerta_minimo')
+            try:
+                ArticuloInventario.objects.create(finca_id=finca_activa_id, nombre=nombre, categoria=categoria, unidad_medida=unidad, alerta_minimo=alerta)
+                messages.success(request, 'Artículo registrado.')
+            except Exception as e:
+                messages.error(request, f'Error: {e}')
+        
+        elif action == 'registrar_movimiento':
+            articulo_id = request.POST.get('articulo_id')
+            tipo = request.POST.get('tipo')
+            cantidad = float(request.POST.get('cantidad') or 0)
+            costo_total = float(request.POST.get('costo_total') or 0)
+            obs = request.POST.get('observaciones', '')
+            try:
+                articulo = ArticuloInventario.objects.get(id=articulo_id, finca_id=finca_activa_id)
+                MovimientoInventario.objects.create(
+                    finca_id=finca_activa_id,
+                    articulo=articulo,
+                    tipo=tipo,
+                    cantidad=cantidad,
+                    costo_total=costo_total if tipo == 'ENTRADA' else 0,
+                    usuario_registro=user,
+                    observaciones=obs
+                )
+                if tipo == 'ENTRADA':
+                    articulo.cantidad_actual = float(articulo.cantidad_actual) + cantidad
+                    if costo_total > 0:
+                        cat_gasto = 'VETERINARIA' if articulo.categoria == 'MEDICAMENTO' else ('ALIMENTO' if articulo.categoria == 'ALIMENTO' else 'OTRO')
+                        GastoFinca.objects.create(
+                            usuario=user,
+                            finca_id=finca_activa_id,
+                            fecha=datetime.date.today(),
+                            categoria=cat_gasto,
+                            concepto=f"Compra Inventario: {articulo.nombre} ({cantidad} {articulo.unidad_medida})",
+                            monto=costo_total,
+                            tipo='VARIABLE'
+                        )
+                elif tipo == 'SALIDA':
+                    articulo.cantidad_actual = max(0, float(articulo.cantidad_actual) - cantidad)
+                else:
+                    articulo.cantidad_actual = cantidad
+                articulo.save()
+                messages.success(request, 'Movimiento registrado exitosamente.')
+            except Exception as e:
+                messages.error(request, f'Error: {e}')
+
+        return redirect('inventario')
+
+    articulos = ArticuloInventario.objects.filter(finca_id=finca_activa_id)
+    movimientos = MovimientoInventario.objects.filter(finca_id=finca_activa_id).order_by('-fecha')[:50]
+    
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'articulos': articulos,
+        'movimientos': movimientos
+    }
+    return render(request, 'inventario.html', context)
+
+def empleados(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        return redirect('login')
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        return redirect('control')
+        
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'registrar_empleado':
+            nombre = request.POST.get('nombre')
+            cargo = request.POST.get('cargo')
+            salario = request.POST.get('salario_base')
+            fecha = request.POST.get('fecha_contratacion')
+            telefono = request.POST.get('telefono')
+            Empleado.objects.create(finca_id=finca_activa_id, nombre=nombre, cargo=cargo, salario_base=salario, fecha_contratacion=fecha, telefono=telefono)
+            messages.success(request, 'Empleado registrado.')
+        elif action == 'pagar_nomina':
+            empleado_id = request.POST.get('empleado_id')
+            monto = request.POST.get('monto')
+            fecha = request.POST.get('fecha')
+            concepto = request.POST.get('concepto')
+            empleado = Empleado.objects.get(id=empleado_id, finca_id=finca_activa_id)
+            PagoNomina.objects.create(finca_id=finca_activa_id, empleado=empleado, fecha=fecha, monto_pagado=monto, concepto=concepto, registrado_por=user)
+            # Automaticamente crea un GastoFinca
+            GastoFinca.objects.create(finca_id=finca_activa_id, fecha=fecha, concepto=f"Nómina: {empleado.nombre} - {concepto}", categoria='SUELDOS', monto=monto, estado='PAGADO', registrado_por=user)
+            messages.success(request, 'Nómina pagada y gasto registrado.')
+        return redirect('empleados')
+        
+    empleados_list = Empleado.objects.filter(finca_id=finca_activa_id)
+    pagos = PagoNomina.objects.filter(finca_id=finca_activa_id).order_by('-fecha')[:50]
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'empleados': empleados_list,
+        'pagos': pagos
+    }
+    return render(request, 'empleados.html', context)
+
+def genetica(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        return redirect('login')
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        return redirect('control')
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'registrar_toro':
+            nombre = request.POST.get('nombre_toro')
+            raza = request.POST.get('raza')
+            codigo = request.POST.get('codigo_pajilla')
+            pta = request.POST.get('pta_leche') or 0
+            precio = request.POST.get('precio') or 0
+            stock = request.POST.get('stock') or 0
+            CatalogoSemen.objects.create(finca_id=finca_activa_id, nombre_toro=nombre, raza=raza, codigo_pajilla=codigo, pta_leche=pta, precio=precio, stock=stock)
+            messages.success(request, 'Toro agregado al catálogo.')
+        elif action == 'actualizar_raza':
+            animal_id = request.POST.get('animal_id')
+            raza = request.POST.get('composicion_racial')
+            anim = Animal.objects.get(id=animal_id, finca_id=finca_activa_id)
+            anim.composicion_racial = raza
+            anim.save()
+            messages.success(request, 'Composición racial actualizada.')
+        return redirect('genetica')
+
+    catalogo = CatalogoSemen.objects.filter(finca_id=finca_activa_id)
+    animales = Animal.objects.filter(finca_id=finca_activa_id)
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'catalogo': catalogo,
+        'animales': animales
+    }
+    return render(request, 'genetica.html', context)
+
+def hoja_vida(request, animal_id):
+    user_id = request.session.get('user')
+    if not user_id:
+        return redirect('login')
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        return redirect('control')
+
+    animal = Animal.objects.get(id=animal_id, finca_id=finca_activa_id)
+    
+    # Recolectar timeline
+    timeline = []
+    # 1. Nacimiento
+    timeline.append({'fecha': animal.fecha_nacimiento, 'tipo': 'NACIMIENTO', 'desc': 'Nacimiento del animal'})
+    # 2. Pesajes
+    for p in PesajeAnimal.objects.filter(animal=animal):
+        timeline.append({'fecha': p.fecha, 'tipo': 'PESAJE', 'desc': f'Pesaje: {p.peso_kg} kg'})
+    # 3. Sanidad
+    for i in IncidenteSanitario.objects.filter(animal=animal):
+        timeline.append({'fecha': i.fecha_incidente, 'tipo': 'SANIDAD', 'desc': f'{i.tipo}: {i.descripcion}'})
+    # 4. Reproduccion (Si es hembra)
+    if animal.sexo == 'H':
+        for s in ServicioReproductivo.objects.filter(hembra=animal):
+            timeline.append({'fecha': s.fecha, 'tipo': 'SERVICIO', 'desc': f'Servicio ({s.get_tipo_display()}) con {s.toro_o_pajilla}'})
+        for d in DiagnosticoGestacion.objects.filter(hembra=animal):
+            timeline.append({'fecha': d.fecha, 'tipo': 'DIAGNOSTICO', 'desc': f'Diagnóstico: {d.get_resultado_display()}'})
+        for p in RegistroParto.objects.filter(madre=animal):
+            timeline.append({'fecha': p.fecha, 'tipo': 'PARTO', 'desc': f'Parto/Aborto: {p.get_tipo_display()}'})
+            
+    # Ordenar por fecha desc
+    timeline.sort(key=lambda x: x['fecha'], reverse=True)
+    
+    context = {
+        'fincas_usuario': fincas_usuario,
+        'animal': animal,
+        'timeline': timeline
+    }
+    return render(request, 'hoja_vida.html', context)

@@ -109,6 +109,9 @@
                     <td>{{ animal.rebaño.nombre|default:"<span class='text-muted small'>Automático / Ninguno</span>"|safe }}</td>
                     <td>{{ animal.fecha_nacimiento|date:"Y-m-d" }}</td>
                     <td class="text-end pe-4">
+                        <a href="{% url 'hoja_vida' animal.id %}" class="btn btn-sm btn-outline-info" title="Hoja de Vida / Trazabilidad">
+                            <i class="bi bi-clock-history"></i>
+                        </a>
                         <!-- El botón Editar pasa todos los parámetros a la función JS -->
                         <button class="btn btn-sm btn-outline-primary" title="Editar"
                                 data-bs-toggle="modal" data-bs-target="#modalRegistroAnimal"

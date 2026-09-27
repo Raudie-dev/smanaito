@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 class User(models.Model):
     nombre = models.CharField(max_length=150, unique=True)
@@ -123,6 +124,7 @@ class Animal(models.Model):
     finca = models.ForeignKey(Finca, on_delete=models.CASCADE, null=True, blank=True)
     codigo = models.CharField(max_length=50)
     nombre = models.CharField(max_length=100)
+    composicion_racial = models.CharField(max_length=150, blank=True, null=True, help_text="Ej: 5/8 Holstein, 3/8 Gyr")
     propietario = models.CharField(max_length=150, null=True, blank=True, help_text="Propietario del animal")
     fecha_nacimiento = models.DateField()
     # Si pertenece a un rebaño fijo:
@@ -144,18 +146,6 @@ class Animal(models.Model):
 
     def __str__(self):
         return f"{self.codigo} - {self.nombre}"
-
-class RegistroOrdeno(models.Model):
-    usuario = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
-    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, null=True, blank=True)
-    fecha = models.DateField(auto_now_add=True)
-    hora_finalizacion = models.TimeField()
-    rebaño = models.ForeignKey(Rebaño, on_delete=models.CASCADE, related_name='registros_ordeno')
-    cantidad_litros = models.DecimalField(max_digits=8, decimal_places=2)
-    observaciones = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.rebaño.nombre} - {self.fecha} - {self.cantidad_litros}L"
 
 class ConfiguracionUsuario(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='configuracion')
@@ -201,6 +191,8 @@ class PlanVacunacion(models.Model):
     # Si rebaño es null, se asume que es para toda la población
     rebaño = models.ForeignKey(Rebaño, on_delete=models.SET_NULL, null=True, blank=True)
     estado = models.CharField(max_length=20, choices=ESTADO_VACUNA_CHOICES, default='PENDIENTE')
+    articulo_inventario = models.ForeignKey('ArticuloInventario', on_delete=models.SET_NULL, null=True, blank=True, related_name='vacunaciones')
+    dosis_por_animal = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Dosis por animal administrado")
     observaciones = models.TextField(blank=True, null=True)
     
     def __str__(self):
@@ -225,10 +217,32 @@ class IncidenteSanitario(models.Model):
     tipo = models.CharField(max_length=50, choices=TIPO_INCIDENTE_CHOICES)
     diagnostico = models.CharField(max_length=200)
     tratamiento = models.TextField(blank=True, null=True)
+    articulo_inventario = models.ForeignKey('ArticuloInventario', on_delete=models.SET_NULL, null=True, blank=True, related_name='incidentes_sanitarios')
+    cantidad_utilizada = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Cantidad de medicamento usada")
     estado = models.CharField(max_length=20, choices=ESTADO_INCIDENTE_CHOICES, default='ACTIVO')
     
     def __str__(self):
         return f"{self.animal.codigo} - {self.diagnostico}"
+
+class LiquidacionLeche(models.Model):
+    ESTADO_PAGO_CHOICES = [
+        ('PENDIENTE', 'Pendiente de Cobro'),
+        ('COBRADO', 'Cobrado'),
+    ]
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField()
+    litros_totales = models.DecimalField(max_digits=12, decimal_places=2)
+    precio_por_litro = models.DecimalField(max_digits=8, decimal_places=2)
+    monto_total = models.DecimalField(max_digits=12, decimal_places=2)
+    comprador = models.CharField(max_length=150, null=True, blank=True, help_text="Cliente / Receptor de la leche")
+    estado_pago = models.CharField(max_length=20, choices=ESTADO_PAGO_CHOICES, default='PENDIENTE')
+    fecha_cobro = models.DateField(null=True, blank=True)
+    observaciones = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Leche ({self.fecha_inicio} a {self.fecha_fin}) - ${self.monto_total} [{self.get_estado_pago_display()}]"
 
 class GastoFinca(models.Model):
     CATEGORIA_CHOICES = [
@@ -255,6 +269,27 @@ class GastoFinca(models.Model):
     def __str__(self):
         return f"{self.concepto} - {self.monto}"
 
+class GastoRecurrente(models.Model):
+    FRECUENCIA_CHOICES = [
+        ('SEMANAL', 'Semanal'),
+        ('MENSUAL', 'Mensual'),
+        ('SEMESTRAL', 'Semestral'),
+        ('ANUAL', 'Anual'),
+    ]
+    
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    concepto = models.CharField(max_length=200)
+    categoria = models.CharField(max_length=50, choices=GastoFinca.CATEGORIA_CHOICES)
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    frecuencia = models.CharField(max_length=20, choices=FRECUENCIA_CHOICES, default='MENSUAL')
+    activo = models.BooleanField(default=True)
+    observaciones = models.TextField(blank=True, null=True)
+    fecha_inicio = models.DateField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.concepto} - ${self.monto} ({self.get_frecuencia_display()})"
+
 class PrecioLecheConfig(models.Model):
     finca = models.OneToOneField(Finca, on_delete=models.CASCADE, related_name='precio_leche_config')
     precio_por_litro = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
@@ -275,7 +310,6 @@ class LogActividad(models.Model):
     MODULO_CHOICES = [
         ('ANIMALES', 'Animales'),
         ('REBAÑOS', 'Rebaños'),
-        ('ORDEÑO', 'Control de Ordeño'),
         ('SANIDAD', 'Sanidad'),
         ('VENTAS', 'Ventas'),
         ('FINANZAS', 'Finanzas'),
@@ -333,6 +367,7 @@ class TareaDiaria(models.Model):
     ]
     finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='tareas')
     fecha = models.DateField()
+    asignado_a = models.ForeignKey('Empleado', on_delete=models.SET_NULL, null=True, blank=True, related_name='tareas_asignadas')
     descripcion = models.TextField()
     categoria = models.CharField(max_length=50, choices=CATEGORIA_CHOICES, default='OTRO')
     completada = models.BooleanField(default=False)
@@ -389,3 +424,110 @@ class OrdenCargaMixer(models.Model):
 
     def __str__(self):
         return f"Orden Mixer {self.fecha} | Capacidad: {self.capacidad_mixer_kg}kg"
+
+# Reproduccion
+class ServicioReproductivo(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    hembra = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='servicios_reproductivos')
+    tipo = models.CharField(max_length=20, choices=[('MONTA', 'Monta Natural'), ('IA', 'Inseminación Artificial'), ('TE', 'Transferencia Embriones')], default='MONTA')
+    fecha = models.DateField()
+    toro_o_pajilla = models.CharField(max_length=150, help_text="ID del toro o lote de pajilla")
+    fecha_probable_parto = models.DateField(null=True, blank=True)
+    observaciones = models.TextField(blank=True, null=True)
+
+class DiagnosticoGestacion(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    hembra = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='diagnosticos_gestacion')
+    fecha = models.DateField()
+    metodo = models.CharField(max_length=20, choices=[('PALPACION', 'Palpación Rectal'), ('ECOGRAFIA', 'Ecografía')], default='PALPACION')
+    resultado = models.CharField(max_length=20, choices=[('PREÑADA', 'Preñada'), ('VACIA', 'Vacía')], default='PREÑADA')
+    observaciones = models.TextField(blank=True, null=True)
+
+class RegistroParto(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    madre = models.ForeignKey(Animal, on_delete=models.CASCADE, related_name='partos_registrados')
+    fecha = models.DateField()
+    tipo = models.CharField(max_length=20, choices=[('PARTO', 'Parto Normal'), ('ABORTO', 'Aborto')], default='PARTO')
+    facilidad = models.CharField(max_length=50, choices=[('NORMAL', 'Normal / Sin Ayuda'), ('ASISTIDO', 'Asistido / Distocia'), ('N_A', 'No Aplica')], default='NORMAL')
+    cria = models.ForeignKey(Animal, on_delete=models.SET_NULL, null=True, blank=True, related_name='parto_origen')
+    observaciones = models.TextField(blank=True, null=True)
+
+# Potreros
+class Potrero(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='potreros')
+    rebaño = models.ForeignKey(Rebaño, on_delete=models.SET_NULL, null=True, blank=True, related_name='potreros_asignados')
+    nombre = models.CharField(max_length=100)
+    hectareas = models.DecimalField(max_digits=8, decimal_places=2)
+    tipo_pasto = models.CharField(max_length=150, blank=True, null=True)
+    estado = models.CharField(max_length=20, choices=[('DESCANSO', 'En Descanso'), ('OCUPADO', 'Ocupado'), ('MANTENIMIENTO', 'En Mantenimiento')], default='DESCANSO')
+
+class RotacionPotrero(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    potrero = models.ForeignKey(Potrero, on_delete=models.CASCADE, related_name='rotaciones')
+    rebaño = models.ForeignKey(Rebaño, on_delete=models.CASCADE, related_name='rotaciones_potrero')
+    fecha_entrada = models.DateField()
+    fecha_salida = models.DateField(null=True, blank=True)
+    observaciones = models.TextField(blank=True, null=True)
+
+# Inventario
+class ArticuloInventario(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='articulos_inventario')
+    nombre = models.CharField(max_length=150)
+    categoria = models.CharField(max_length=50, choices=[('MEDICAMENTO', 'Medicamentos / Vacunas'), ('ALIMENTO', 'Alimentos / Suplementos'), ('HERRAMIENTA', 'Herramientas / Equipos'), ('OTRO', 'Otros')], default='OTRO')
+    unidad_medida = models.CharField(max_length=20, choices=[('KG', 'Kilogramos'), ('LT', 'Litros'), ('UNIDAD', 'Unidades'), ('DOSIS', 'Dosis')], default='UNIDAD')
+    cantidad_actual = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    alerta_minimo = models.DecimalField(max_digits=10, decimal_places=2, default=5.00)
+
+class MovimientoInventario(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    articulo = models.ForeignKey(ArticuloInventario, on_delete=models.CASCADE, related_name='movimientos')
+    fecha = models.DateTimeField(auto_now_add=True)
+    tipo = models.CharField(max_length=20, choices=[('ENTRADA', 'Entrada / Compra'), ('SALIDA', 'Salida / Consumo'), ('AJUSTE', 'Ajuste')], default='SALIDA')
+    cantidad = models.DecimalField(max_digits=10, decimal_places=2)
+    costo_total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Costo total de la entrada / compra")
+    usuario_registro = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    observaciones = models.TextField(blank=True, null=True)
+
+# Genetica Avanzada
+class CatalogoSemen(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    nombre_toro = models.CharField(max_length=150)
+    raza = models.CharField(max_length=100)
+    codigo_pajilla = models.CharField(max_length=50, unique=True)
+    pta_leche = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text="Predicted Transmitting Ability")
+    precio = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    stock = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.nombre_toro} ({self.codigo_pajilla})"
+
+# Recursos Humanos
+class Empleado(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='empleados')
+    nombre = models.CharField(max_length=150)
+    cargo = models.CharField(max_length=50, choices=[('MAYORAL', 'Mayoral'), ('VETERINARIO', 'Veterinario'), ('OBRERO', 'Obrero / Peón')])
+    salario_base = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha_contratacion = models.DateField()
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.nombre} - {self.get_cargo_display()}"
+
+class PagoNomina(models.Model):
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE)
+    empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE, related_name='pagos')
+    fecha = models.DateField()
+    monto_pagado = models.DecimalField(max_digits=10, decimal_places=2)
+    concepto = models.CharField(max_length=200, help_text="Ej: Quincena 1 Enero")
+    registrado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+class WebAuthnCredential(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='webauthn_credentials')
+    credential_id = models.TextField(unique=True)
+    public_key = models.TextField()
+    sign_count = models.IntegerField(default=0)
+    device_name = models.CharField(max_length=150, default="Dispositivo Biométrico")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Credencial de {self.user.nombre} ({self.device_name})"

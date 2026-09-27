@@ -104,6 +104,60 @@
 
                 <!-- Pestaña 3: Seguridad y Acceso -->
                 <div class="tab-pane fade" id="v-pills-seguridad" role="tabpanel">
+                    <!-- Huella Dactilar / Biometría PWA -->
+                    <div class="card shadow-sm border-0 mb-4 border-start border-success border-4">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-fingerprint me-2 text-success fs-5"></i>Acceso Biométrico (Huella Digital PWA)</h6>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1">Biometría WebAuthn</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Registra la huella digital o datos biométricos de tu teléfono móvil / dispositivo para iniciar sesión instantáneamente sin escribir la contraseña.</p>
+                            
+                            <div class="d-flex align-items-center gap-3 mb-4">
+                                <button type="button" id="btnRegisterFingerprint" class="btn btn-success px-4 py-2 fw-semibold">
+                                    <i class="bi bi-fingerprint me-1 fs-5 align-middle"></i> Registrar Huella Digital en este Dispositivo
+                                </button>
+                            </div>
+
+                            <h6 class="fw-bold small text-muted text-uppercase mb-3">Dispositivos y Huellas Registradas</h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light small">
+                                        <tr>
+                                            <th>Dispositivo</th>
+                                            <th>Fecha de Registro</th>
+                                            <th>Usos</th>
+                                            <th class="text-end">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for cred in webauthn_creds %}
+                                        <tr>
+                                            <td class="fw-bold text-dark">
+                                                <i class="bi bi-phone me-2 text-primary"></i>{{ cred.device_name }}
+                                            </td>
+                                            <td class="text-muted small">{{ cred.created_at|date:"d/m/Y H:i" }}</td>
+                                            <td><span class="badge bg-light text-dark border">{{ cred.sign_count }} accesos</span></td>
+                                            <td class="text-end">
+                                                <a href="{% url 'webauthn_delete' cred.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar esta huella de acceso?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-3 small">
+                                                No tienes huellas registradas aún. Presiona el botón verde arriba para vincular tu dispositivo.
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cambiar Contraseña -->
                     <div class="card shadow-sm border-0">
                         <div class="card-header bg-white py-3">
                             <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-danger"></i>Cambiar Contraseña de Acceso</h6>
@@ -135,4 +189,78 @@
         </div>
     </div>
 </div>
+
+<script>
+    if (window.PublicKeyCredential && window.isSecureContext) {
+        function bufferToBase64Url(buffer) {
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        function base64UrlToBuffer(base64url) {
+            const padding = '='.repeat((4 - base64url.length % 4) % 4);
+            const base64 = (base64url + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray.buffer;
+        }
+
+        document.getElementById('btnRegisterFingerprint')?.addEventListener('click', async function() {
+            try {
+                const optRes = await fetch("{% url 'webauthn_register_options' %}");
+                const options = await optRes.json();
+
+                const challengeBuffer = base64UrlToBuffer(options.challenge);
+                const userIdBuffer = new TextEncoder().encode(options.user.id);
+
+                const credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: challengeBuffer,
+                        rp: options.rp,
+                        user: {
+                            id: userIdBuffer,
+                            name: options.user.name,
+                            displayName: options.user.displayName
+                        },
+                        pubKeyCredParams: options.pubKeyCredParams,
+                        authenticatorSelection: options.authenticatorSelection,
+                        timeout: options.timeout
+                    }
+                });
+
+                const rawId = bufferToBase64Url(credential.rawId);
+                const deviceName = prompt("Ingresa un nombre para este dispositivo:", "Mi Teléfono Móvil") || "Dispositivo Móvil";
+
+                const verifyRes = await fetch("{% url 'webauthn_register_verify' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        id: credential.id,
+                        rawId: rawId,
+                        device_name: deviceName
+                    })
+                });
+
+                const result = await verifyRes.json();
+                if (result.success) {
+                    alert('¡Huella registrada con éxito! Ya puedes iniciar sesión con tu huella digital.');
+                    window.location.reload();
+                } else {
+                    alert(result.error || 'Error al registrar huella');
+                }
+            } catch (err) {
+                console.error(err);
+                if (err.name !== 'NotAllowedError') {
+                    alert('No se pudo registrar la huella digital: ' + (err.message || 'Error desconocido'));
+                }
+            }
+        });
+    }
+</script>
 {% endblock %}

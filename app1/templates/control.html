@@ -4,135 +4,380 @@
 {% block section_title %}Resumen del Establo{% endblock %}
 
 {% block content %}
-<div class="row mt-4">
-    <div class="col-md-4 mb-4">
-        <div class="card shadow-sm p-4 h-100" style="border-left: 5px solid var(--primary-light);">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h5 class="text-muted text-uppercase mb-1" style="font-size: 0.8rem; letter-spacing: 1px;">Total de Animales</h5>
-                    <p class="h2 text-dark mb-0 fw-bold">{{ total_animales }}</p>
-                </div>
-                <div class="icon-shape bg-success bg-opacity-10 text-success p-3 rounded-circle" style="font-size: 1.8rem;">
-                    <i class="bi bi-heptagon-half"></i>
-                </div>
-            </div>
-            <div class="mt-3 text-sm d-flex gap-3">
-                <span class="text-danger fw-bold"><i class="bi bi-gender-female"></i> {{ total_hembras }} Hembras</span>
-                <span class="text-primary fw-bold"><i class="bi bi-gender-male"></i> {{ total_machos }} Machos</span>
-            </div>
+<div class="container-fluid p-0">
+    <!-- Header Row -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h5 class="fw-bold mb-1 text-dark">
+                <i class="bi bi-speedometer2 text-primary me-2"></i>Panel de Control Operativo y Rendimiento
+            </h5>
+            <p class="text-muted small mb-0">Visión consolidada de producción lechera, inventario, sanidad y flujo financiero.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'inventario' %}" class="btn btn-outline-primary shadow-sm btn-sm">
+                <i class="bi bi-box-seam me-1"></i> Ir a Inventario
+            </a>
+            <a href="{% url 'finanzas' %}" class="btn btn-primary shadow-sm btn-sm">
+                <i class="bi bi-cash-stack me-1"></i> Ir a Finanzas
+            </a>
         </div>
     </div>
-    
-    <div class="col-md-4 mb-4">
-        <div class="card shadow-sm p-4 h-100" style="border-left: 5px solid var(--accent-color);">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h5 class="text-muted text-uppercase mb-1" style="font-size: 0.8rem; letter-spacing: 1px;">Prod. de Leche (Semanal)</h5>
-                    <p class="h2 text-dark mb-0 fw-bold">{{ prod_semanal|floatformat:1 }} L</p>
-                </div>
-                <div class="icon-shape bg-warning bg-opacity-10 text-warning p-3 rounded-circle" style="font-size: 1.8rem;">
-                    <i class="bi bi-droplet-half"></i>
-                </div>
-            </div>
-            <div class="mt-3 text-sm">
-                <span class="text-muted">Registrado en los últimos 7 días</span>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-4 mb-4">
-        <div class="card shadow-sm p-4 h-100" style="border-left: 5px solid #f44336;">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h5 class="text-muted text-uppercase mb-1" style="font-size: 0.8rem; letter-spacing: 1px;">Alertas de Destete</h5>
-                    <p class="h2 text-dark mb-0 fw-bold">
-                        {% if config.usar_destete %}
-                            {{ alertas_destete_count }}
-                        {% else %}
-                            --
-                        {% endif %}
-                    </p>
-                </div>
-                <div class="icon-shape bg-danger bg-opacity-10 text-danger p-3 rounded-circle" style="font-size: 1.8rem;">
-                    <i class="bi bi-exclamation-triangle"></i>
-                </div>
-            </div>
-            <div class="mt-3 text-sm">
-                {% if config.usar_destete %}
-                    <span class="text-muted">Becerros >= {{ config.meses_destete }} meses sin destetar</span>
-                {% else %}
-                    <span class="text-muted">Módulo desactivado</span>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Fila del Gráfico de Producción de Leche -->
-<div class="row mt-3">
-    <div class="col-12">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-graph-up me-2 text-success"></i>Producción de Leche Diaria (Últimos 7 Días)</h5>
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm mb-4" role="alert">
+            <i class="bi bi-info-circle me-2"></i>{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Top KPI Cards Grid -->
+    <div class="row mb-4">
+        <!-- Total Animales -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-primary border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Total de Ganado</span>
+                        <div class="p-2 rounded-circle bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-heptagon-half fs-4"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark">{{ total_animales }}</h3>
+                    <div class="d-flex gap-2 mt-2 small">
+                        <span class="text-danger fw-bold"><i class="bi bi-gender-female"></i> {{ total_hembras }} H</span>
+                        <span class="text-primary fw-bold"><i class="bi bi-gender-male"></i> {{ total_machos }} M</span>
+                        <span class="text-success fw-bold"><i class="bi bi-droplet"></i> {{ vacas_lactancia }} Lact</span>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div style="height: 250px; position: relative;">
-                    <canvas id="chartProdSemanal"></canvas>
+        </div>
+
+        <!-- Rendimiento Lechero Semanal -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-warning border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Prod. Leche (Semanal)</span>
+                        <div class="p-2 rounded-circle bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-droplet-half fs-4"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark">{{ prod_semanal|floatformat:1 }} L</h3>
+                    <p class="text-muted small mb-0"><i class="bi bi-graph-up text-success me-1"></i>Últimos 7 días registrados</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas Inventario -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start {% if count_alertas_inventario > 0 %}border-danger{% else %}border-success{% endif %} border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Alertas Stock Bajo</span>
+                        <div class="p-2 rounded-circle {% if count_alertas_inventario > 0 %}bg-danger bg-opacity-10 text-danger{% else %}bg-success bg-opacity-10 text-success{% endif %}">
+                            <i class="bi bi-box-seam fs-4"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark">{{ count_alertas_inventario }}</h3>
+                    <div class="d-flex gap-3 mt-2 small">
+                        <span class="text-danger fw-semibold"><i class="bi bi-capsule me-1"></i>{{ count_medicina_alert }} Medicinas</span>
+                        <span class="text-warning fw-semibold"><i class="bi bi-basket me-1"></i>{{ count_alimento_alert }} Alimentos</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dinero Disponible -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start {% if dinero_disponible >= 0 %}border-success{% else %}border-danger{% endif %} border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Dinero Disponible</span>
+                        <div class="p-2 rounded-circle {% if dinero_disponible >= 0 %}bg-success bg-opacity-10 text-success{% else %}bg-danger bg-opacity-10 text-danger{% endif %}">
+                            <i class="bi bi-wallet2 fs-4"></i>
+                        </div>
+                    </div>
+                    <h3 class="fw-bold mb-1 {% if dinero_disponible >= 0 %}text-success{% else %}text-danger{% endif %}">${{ dinero_disponible|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0">Liquidez real en caja</p>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<div class="row">
-    <!-- Tabla de Eventos -->
-    <div class="col-lg-8 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0 flex-wrap gap-3">
-                <h5 class="mb-0 fw-bold text-dark">Últimos Eventos Registrados</h5>
+    <!-- Milk Production Yield Chart Row -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 border-bottom border-light">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-graph-up me-2 text-success"></i>Tabla y Tendencia de Rendimiento de Leche (Últimos 7 Días)
+                    </h6>
+                    <div class="d-flex flex-wrap gap-1.5">
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1 rounded-pill">
+                            <i class="bi bi-droplet-fill me-1"></i>{{ vacas_lactancia }} en Lactancia
+                        </span>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2.5 py-1 rounded-pill">
+                            {{ vacas_secas }} Secas
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div style="height: 230px; position: relative;">
+                        <canvas id="chartProdSemanal"></canvas>
+                    </div>
+                </div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 text-nowrap">
-                    <thead class="table-light text-muted" style="font-size: 0.85rem;">
-                        <tr>
-                            <th class="ps-4">ID Animal</th>
-                            <th>Tipo de Evento</th>
-                            <th>Fecha</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for e in eventos %}
-                        <tr>
-                            <td class="ps-4 fw-bold">{{ e.id }}</td>
-                            <td>{{ e.tipo }}</td>
-                            <td>{{ e.fecha }}</td>
-                            <td><span class="badge {{ e.badge }}">{{ e.estado }}</span></td>
-                        </tr>
+        </div>
+    </div>
+
+    <!-- Main Operational Grid -->
+    <div class="row mb-4">
+        <!-- Left Column: Inventory Alerts & Recent Insumos Movements -->
+        <div class="col-lg-7 mb-4 mb-lg-0">
+            <!-- Card Alertas de Inventario -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom border-light">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-exclamation-triangle me-2 text-danger"></i>Insumos y Medicinas en Alerta de Stock
+                    </h6>
+                    <a href="{% url 'inventario' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-circle me-1"></i> Reponer
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th>Artículo</th>
+                                    <th>Categoría</th>
+                                    <th>Stock Actual</th>
+                                    <th>Mínimo</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for art in articulos_bajo_stock %}
+                                <tr>
+                                    <td class="fw-bold text-dark">{{ art.nombre }}</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">
+                                            {{ art.get_categoria_display }}
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold {% if art.cantidad_actual <= 0 %}text-danger{% else %}text-warning{% endif %}">
+                                        {{ art.cantidad_actual }} {{ art.get_unidad_medida_display }}
+                                    </td>
+                                    <td class="text-muted small">{{ art.alerta_minimo }} {{ art.get_unidad_medida_display }}</td>
+                                    <td>
+                                        {% if art.cantidad_actual <= 0 %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1">
+                                            Agotado
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-1">
+                                            Bajo Stock
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4 small">
+                                        <i class="bi bi-check-circle text-success fs-5 d-block mb-1"></i>
+                                        ¡Excelente! Todos los medicamentos y alimentos tienen stock suficiente.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Movimientos Recientes de Insumos -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom border-light">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-arrow-left-right me-2 text-primary"></i>Últimos Movimientos de Insumos y Medicinas
+                    </h6>
+                    <a href="{% url 'inventario' %}" class="btn btn-sm btn-link text-primary p-0 text-decoration-none">Ver Todos</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Artículo</th>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                    <th>Detalle</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mov in movimientos_recientes %}
+                                <tr>
+                                    <td class="text-muted small">{{ mov.fecha|date:"d/m/Y H:i" }}</td>
+                                    <td class="fw-semibold text-dark">{{ mov.articulo.nombre }}</td>
+                                    <td>
+                                        {% if mov.tipo == 'ENTRADA' %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5">
+                                            Entrada (+)
+                                        </span>
+                                        {% elif mov.tipo == 'SALIDA' %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2.5">
+                                            Salida (-)
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill px-2.5">
+                                            Ajuste
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold text-dark">{{ mov.cantidad }} {{ mov.articulo.get_unidad_medida_display }}</td>
+                                    <td class="text-muted small">{{ mov.observaciones|default:"--"|truncatechars:35 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4 small">No se han registrado movimientos de insumos recientes.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Milk Pending Liquidations, Health Alerts & Recent Animals -->
+        <div class="col-lg-5">
+            <!-- Card Entregas de Leche Pendientes de Cobro -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom border-light">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-clock-history me-2 text-warning"></i>Pagos de Leche Pendientes (${{ monto_pendiente_leche|floatformat:2 }})
+                    </h6>
+                    <a href="{% url 'finanzas' %}" class="btn btn-sm btn-outline-warning">
+                        Ver Finanzas
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for liq in liquidaciones_pendientes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <span class="fw-bold text-dark d-block">
+                                    {{ liq.fecha_inicio|date:"d/m" }} al {{ liq.fecha_fin|date:"d/m/Y" }}
+                                </span>
+                                <small class="text-muted">{{ liq.litros_totales|floatformat:1 }} L entregados {% if liq.comprador %}({{ liq.comprador }}){% endif %}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="fw-bold text-warning d-block">${{ liq.monto_total|floatformat:2 }}</span>
+                                <form method="POST" action="{% url 'finanzas' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="cobrar_liquidacion">
+                                    <input type="hidden" name="liquidacion_id" value="{{ liq.id }}">
+                                    <button type="submit" class="btn btn-sm btn-success py-0 px-2 mt-1" style="font-size: 0.75rem;">
+                                        <i class="bi bi-check2"></i> Cobrar
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
                         {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center py-4 text-muted">Aún no hay eventos registrados en el sistema.</td>
-                        </tr>
+                        <li class="list-group-item text-center text-muted py-4 small">
+                            <i class="bi bi-check-circle text-success fs-5 d-block mb-1"></i>
+                            Sin cobros pendientes de leche. Todas las entregas están al día.
+                        </li>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Balance Financiero en el Dashboard -->
-    <div class="col-lg-4 mb-4">
-        <div class="card shadow-sm h-100 bg-dark text-white" style="border-radius: 15px;">
-            <div class="card-body p-4 d-flex flex-column justify-content-between">
-                <div>
-                    <h6 class="text-uppercase text-secondary fw-bold mb-3" style="font-size: 0.75rem; letter-spacing: 1px;">Balance Financiero Neto</h6>
-                    <h2 class="display-5 fw-bold {% if balance_neto >= 0 %}text-success{% else %}text-danger{% endif %}">${{ balance_neto|floatformat:2 }}</h2>
-                    <p class="text-muted small">Ganancia neta acumulada en la finca actual</p>
+                    </ul>
                 </div>
-                <hr class="border-secondary my-4">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-muted small">Módulo contable activo</span>
-                    <a href="{% url 'finanzas' %}" class="btn btn-sm btn-outline-success">Ver Contabilidad <i class="bi bi-arrow-right"></i></a>
+            </div>
+
+            <!-- Card Sanidad y Vacunaciones -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-shield-plus me-2 text-danger"></i>Sanidad y Vacunación Próxima
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for vac in vacunas_pendientes %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                            <div>
+                                <span class="fw-bold text-dark d-block"><i class="bi bi-capsule me-1 text-primary"></i>Vacuna: {{ vac.vacuna }}</span>
+                                <small class="text-muted">Prog: {{ vac.fecha_programada|date:"d/m/Y" }}</small>
+                            </div>
+                            <a href="{% url 'vacunacion' %}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.75rem;">Ver Sanidad</a>
+                        </li>
+                        {% endfor %}
+
+                        {% for inc in incidentes_activos %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                            <div>
+                                <span class="fw-bold text-danger d-block"><i class="bi bi-activity me-1"></i>Tratamiento: {{ inc.animal.codigo }}</span>
+                                <small class="text-muted">{{ inc.diagnostico }} ({{ inc.fecha_incidente|date:"d/m" }})</small>
+                            </div>
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill">Activo</span>
+                        </li>
+                        {% endfor %}
+
+                        {% if not vacunas_pendientes and not incidentes_activos %}
+                        <li class="list-group-item text-center text-muted py-3 small">
+                            No hay vacunaciones pendientes ni incidentes activos.
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Card Ganado Registrado Recientemente -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-bottom border-light">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-journal-check me-2 text-success"></i>Últimos Animales Registrados
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Sexo</th>
+                                    <th class="text-end">Ficha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in ultimos_animales %}
+                                <tr>
+                                    <td class="fw-bold text-dark">{{ a.codigo }}</td>
+                                    <td>{{ a.nombre }}</td>
+                                    <td>
+                                        {% if a.sexo == 'M' %}
+                                        <span class="badge bg-primary bg-opacity-10 text-primary">M</span>
+                                        {% else %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger">H</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{% url 'hoja_vida' a.id %}" class="btn btn-sm btn-link text-primary p-0">
+                                            <i class="bi bi-file-earmark-person fs-6"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3 small">No hay animales registrados.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -151,15 +396,15 @@ document.addEventListener("DOMContentLoaded", function() {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Litros Producidos',
+                label: 'Litros Entregados / Producidos',
                 data: dataValores,
-                borderColor: '#2e7d32',
-                backgroundColor: 'rgba(46, 125, 50, 0.1)',
-                borderWidth: 3,
+                borderColor: '#198754',
+                backgroundColor: 'rgba(25, 135, 84, 0.1)',
                 fill: true,
-                tension: 0.3,
-                pointBackgroundColor: '#2e7d32',
-                pointRadius: 4
+                tension: 0.35,
+                borderWidth: 3,
+                pointBackgroundColor: '#198754',
+                pointRadius: 5
             }]
         },
         options: {
@@ -174,7 +419,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 y: {
                     beginAtZero: true,
                     grid: {
-                        drawBorder: false
+                        color: 'rgba(0,0,0,0.05)'
                     }
                 },
                 x: {

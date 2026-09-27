@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% block section_title %}Gestión Genética Avanzada{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h5 class="fw-bold mb-1">Gestión Genética Avanzada</h5>
+            <p class="text-muted small mb-0">Catálogo de pajillas, toros externos y composición racial del hato.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarToro">
+                <i class="bi bi-droplet-fill me-1"></i> Registrar Pajilla / Toro
+            </button>
+            <button class="btn btn-outline-dark shadow-sm" data-bs-toggle="modal" data-bs-target="#modalActualizarRaza">
+                <i class="bi bi-bezier2 me-1"></i> Actualizar Raza Animal
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Catálogo de Semen -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-journal-bookmark-fill me-2 text-primary"></i>Catálogo de Semen y Toros Disponibles</h6>
+                    <span class="badge bg-light text-dark border">{{ catalogo.count }} registros</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th>Toro</th>
+                                    <th>Código</th>
+                                    <th>Raza</th>
+                                    <th>PTA Leche</th>
+                                    <th>Stock</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in catalogo %}
+                                <tr>
+                                    <td class="fw-bold">{{ c.nombre_toro }}</td>
+                                    <td>{{ c.codigo_pajilla }}</td>
+                                    <td>{{ c.raza }}</td>
+                                    <td class="text-success fw-bold">{{ c.pta_leche|default:"-" }}</td>
+                                    <td>
+                                        <span class="badge {% if c.stock > 0 %}bg-primary{% else %}bg-secondary{% endif %}">
+                                            {{ c.stock }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center py-4 text-muted">El catálogo está vacío.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Pajilla / Toro Externo -->
+<div class="modal fade" id="modalRegistrarToro" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-droplet-fill me-2 text-primary"></i>Registrar Pajilla / Toro Externo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="registrar_toro">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Nombre del Toro</label>
+                        <input type="text" name="nombre_toro" class="form-control" placeholder="Ej: Kingbull 500" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Código de Pajilla / Lote</label>
+                            <input type="text" name="codigo_pajilla" class="form-control" placeholder="Ej: PAJ-882" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Raza</label>
+                            <input type="text" name="raza" class="form-control" placeholder="Ej: Brahman, Gyr" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">PTA Leche</label>
+                            <input type="number" step="0.01" name="pta_leche" class="form-control" placeholder="Opcional">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Precio Unitario ($)</label>
+                            <input type="number" step="0.01" name="precio" class="form-control" placeholder="0.00">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold">Stock Inicial</label>
+                            <input type="number" name="stock" class="form-control" placeholder="10">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> Añadir al Catálogo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Actualizar Raza de Animal -->
+<div class="modal fade" id="modalActualizarRaza" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-bezier2 me-2 text-dark"></i>Actualizar Composición Racial</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="actualizar_raza">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Animal</label>
+                        <select name="animal_id" class="form-select" required>
+                            <option value="">Seleccione Animal...</option>
+                            {% for a in animales %}
+                            <option value="{{ a.id }}">{{ a.codigo }} - {{ a.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Composición Racial</label>
+                        <input type="text" name="composicion_racial" class="form-control" placeholder="Ej: 5/8 Holstein, 3/8 Brahman" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-dark px-4"><i class="bi bi-save me-1"></i> Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -17,6 +17,7 @@
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mt-4 mb-4 gap-3">
     <h3 class="fw-bold text-dark mb-0"><i class="bi bi-grid-3x3-gap me-2 text-primary"></i> Rebaños Registrados</h3>
     <div class="d-flex flex-column flex-sm-row gap-2">
+        {% if mostrar_btn_estandares %}
         <form method="POST" class="d-inline w-100">
             {% csrf_token %}
             <input type="hidden" name="action" value="generar_estandares">
@@ -24,6 +25,7 @@
                 <i class="bi bi-magic me-1"></i> Generar Estándares
             </button>
         </form>
+        {% endif %}
         <button class="btn btn-primary shadow-sm w-100" data-bs-toggle="modal" data-bs-target="#modalRebaño" onclick="openModalCrear()">
             <i class="bi bi-plus-lg me-1"></i> Crear Rebaño
         </button>

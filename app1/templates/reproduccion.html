@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% block section_title %}Reproducción Avanzada{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h5 class="fw-bold mb-1">Reproducción Avanzada</h5>
+            <p class="text-muted small mb-0">Control de servicios, inseminaciones, diagnósticos de gestación y partos.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarServicio">
+                <i class="bi bi-gender-female me-1"></i> Registrar Servicio
+            </button>
+            <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDiagnosticoGestacion">
+                <i class="bi bi-search me-1"></i> Diagnóstico Gestación
+            </button>
+            <button class="btn btn-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarParto">
+                <i class="bi bi-balloon me-1"></i> Registrar Parto / Aborto
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Tabla ÚLtimos Servicios Registrados -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-card-checklist me-2 text-primary"></i>Últimos Servicios Registrados</h6>
+                    <span class="badge bg-light text-dark border">{{ servicios.count }} servicios</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th>Hembra</th>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Toro/Pajilla</th>
+                                    <th>F.P.P (Aprox)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in servicios %}
+                                <tr>
+                                    <td class="fw-bold text-dark">{{ s.hembra.codigo }} - {{ s.hembra.nombre }}</td>
+                                    <td>{{ s.fecha|date:"d/m/Y" }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ s.get_tipo_display }}</span></td>
+                                    <td>{{ s.toro_o_pajilla }}</td>
+                                    <td class="fw-bold text-success">{{ s.fecha_probable_parto|date:"d/m/Y"|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center py-4 text-muted">No hay registros de servicio.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Servicio -->
+<div class="modal fade" id="modalRegistrarServicio" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-gender-female me-2 text-primary"></i>Registrar Servicio / Monta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="registrar_servicio">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Hembra</label>
+                        <select name="animal_id" class="form-select" required>
+                            <option value="">Seleccione Hembra...</option>
+                            {% for h in hembras %}
+                            <option value="{{ h.id }}">{{ h.codigo }} - {{ h.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Tipo de Servicio</label>
+                            <select name="tipo" class="form-select" required>
+                                <option value="MONTA">Monta Natural</option>
+                                <option value="IA">Inseminación Artificial (IA)</option>
+                                <option value="TE">Transferencia de Embriones (TE)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Fecha del Servicio</label>
+                            <input type="date" name="fecha" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">ID Toro / Lote de Semen</label>
+                        <input type="text" name="toro_o_pajilla" class="form-control" placeholder="Ej: Toro Don Juan o Pajilla #991" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2" placeholder="Detalles adicionales..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-circle me-1"></i> Guardar Servicio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Diagnóstico Gestación -->
+<div class="modal fade" id="modalDiagnosticoGestacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-search me-2 text-success"></i>Diagnóstico de Gestación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="registrar_diagnostico">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Hembra</label>
+                        <select name="animal_id" class="form-select" required>
+                            <option value="">Seleccione Hembra...</option>
+                            {% for h in hembras %}
+                            <option value="{{ h.id }}">{{ h.codigo }} - {{ h.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Fecha Diagnóstico</label>
+                            <input type="date" name="fecha" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Método</label>
+                            <select name="metodo" class="form-select" required>
+                                <option value="PALPACION">Palpación Rectal</option>
+                                <option value="ECOGRAFIA">Ecografía</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Resultado</label>
+                        <select name="resultado" class="form-select" required>
+                            <option value="PREÑADA">Confirmada Preñada</option>
+                            <option value="VACIA">Vacía</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2" placeholder="Notas del diagnóstico..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success px-4"><i class="bi bi-check-circle me-1"></i> Guardar Diagnóstico</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Parto / Aborto -->
+<div class="modal fade" id="modalRegistrarParto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-balloon me-2 text-danger"></i>Registrar Parto / Aborto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="registrar_parto">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Madre</label>
+                        <select name="animal_id" class="form-select" required>
+                            <option value="">Seleccione Madre...</option>
+                            {% for h in hembras %}
+                            {% if h.estado_gestacion == 'PREÑADA' %}
+                            <option value="{{ h.id }}">{{ h.codigo }} - {{ h.nombre }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Fecha del Evento</label>
+                            <input type="date" name="fecha" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Tipo de Evento</label>
+                            <select name="tipo" class="form-select" required>
+                                <option value="PARTO">Parto Normal (Crea becerro)</option>
+                                <option value="ABORTO">Aborto</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Facilidad del Parto</label>
+                        <select name="facilidad" class="form-select" required>
+                            <option value="NORMAL">Normal / Sin Ayuda</option>
+                            <option value="ASISTIDO">Asistido / Distocia</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2" placeholder="Observaciones del parto o recién nacido..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger px-4"><i class="bi bi-check-circle me-1"></i> Registrar Evento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -9,80 +9,167 @@
 <div class="container-fluid p-0">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
         <div>
-            <h5 class="fw-bold mb-1">Contabilidad y Balance</h5>
-            <p class="text-muted small mb-0">Control de gastos e ingresos generados automáticamente.</p>
+            <h5 class="fw-bold mb-1">Contabilidad, Flujo de Caja y Balance</h5>
+            <p class="text-muted small mb-0">Control consolidado de liquidez, entregas de leche por periodo y ventas de ganado.</p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarGasto">
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarLiquidacion">
+                <i class="bi bi-droplet-fill me-1"></i> Liquidación de Leche
+            </button>
+            <button class="btn btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRegistrarGasto">
                 <i class="bi bi-plus-circle me-1"></i> Registrar Gasto
             </button>
-            <button class="btn btn-outline-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPrecioLeche">
-                <i class="bi bi-gear me-1"></i> Configurar Leche
+            <button class="btn btn-outline-secondary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPrecioLeche">
+                <i class="bi bi-gear me-1"></i> Precio Leche
             </button>
         </div>
     </div>
 
     {% if messages %}
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-info-circle me-2"></i>{{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         {% endfor %}
     {% endif %}
 
-    <!-- Tarjetas de Balance -->
+    <!-- Tarjetas de Balance y Flujo Real -->
     <div class="row mb-4">
-        <!-- Ingresos de Leche -->
+        <!-- Dinero Disponible / Flujo Real -->
         <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm h-100 border-start border-success border-4">
+            <div class="card border-0 shadow-sm h-100 border-start {% if dinero_disponible >= 0 %}border-success{% else %}border-danger{% endif %} border-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small text-uppercase fw-bold">Ingreso por Leche</span>
-                        <i class="bi bi-droplet-half text-success fs-4"></i>
+                        <span class="text-muted small text-uppercase fw-bold">Dinero Disponible</span>
+                        <i class="bi bi-wallet2 {% if dinero_disponible >= 0 %}text-success{% else %}text-danger{% endif %} fs-4"></i>
                     </div>
-                    <h3 class="fw-bold mb-1">${{ ingresos_leche|floatformat:2 }}</h3>
-                    <p class="text-muted small mb-0">Basado en {{ litros_totales }} litros a ${{ precio_leche_config.precio_por_litro }}/L</p>
+                    <h3 class="fw-bold mb-1 {% if dinero_disponible >= 0 %}text-success{% else %}text-danger{% endif %}">${{ dinero_disponible|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0">Liquidez real (Cobrado - Egresos)</p>
                 </div>
             </div>
         </div>
-        <!-- Ingresos de Animales -->
+
+        <!-- Ingreso Leche Cobrada -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 border-start border-primary border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small text-uppercase fw-bold">Leche Cobrada</span>
+                        <i class="bi bi-droplet-half text-primary fs-4"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark">${{ ingresos_leche_cobrados|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0">
+                        <span class="text-warning fw-semibold">${{ ingresos_leche_pendientes|floatformat:2 }}</span> por cobrar
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ventas de Ganado -->
         <div class="col-xl-3 col-md-6 mb-3">
             <div class="card border-0 shadow-sm h-100 border-start border-info border-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small text-uppercase fw-bold">Venta de Animales</span>
+                        <span class="text-muted small text-uppercase fw-bold">Venta de Ganado</span>
                         <i class="bi bi-piggy-bank text-info fs-4"></i>
                     </div>
-                    <h3 class="fw-bold mb-1">${{ ingresos_animales|floatformat:2 }}</h3>
-                    <p class="text-muted small mb-0">Total acumulado en ventas de carne/cría</p>
+                    <h3 class="fw-bold mb-1 text-dark">${{ ingresos_animales|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0">Ingresos aleatorios por ventas</p>
                 </div>
             </div>
         </div>
+
         <!-- Egresos Totales -->
         <div class="col-xl-3 col-md-6 mb-3">
             <div class="card border-0 shadow-sm h-100 border-start border-danger border-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small text-uppercase fw-bold">Gastos Totales</span>
+                        <span class="text-muted small text-uppercase fw-bold">Gastos & Compras</span>
                         <i class="bi bi-cart-dash text-danger fs-4"></i>
                     </div>
-                    <h3 class="fw-bold mb-1">${{ egresos_totales|floatformat:2 }}</h3>
-                    <p class="text-muted small mb-0">Egresos fijos y variables registrados</p>
+                    <h3 class="fw-bold mb-1 text-dark">${{ egresos_totales|floatformat:2 }}</h3>
+                    <p class="text-muted small mb-0">Gastos (${{ egresos_gastos|floatformat:2 }}) + Insumos (${{ egresos_inventario|floatformat:2 }})</p>
                 </div>
             </div>
         </div>
-        <!-- Balance Neto -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm h-100 border-start {% if balance_neto >= 0 %}border-primary{% else %}border-warning{% endif %} border-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="text-muted small text-uppercase fw-bold">Balance Neto</span>
-                        <i class="bi bi-wallet2 {% if balance_neto >= 0 %}text-primary{% else %}text-warning{% endif %} fs-4"></i>
-                    </div>
-                    <h3 class="fw-bold mb-1 {% if balance_neto >= 0 %}text-primary{% else %}text-danger{% endif %}">${{ balance_neto|floatformat:2 }}</h3>
-                    <p class="text-muted small mb-0">Balance de rentabilidad actual</p>
-                </div>
+    </div>
+
+    <!-- Liquidaciones de Leche por Periodo -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom border-light">
+            <h6 class="mb-0 fw-bold text-dark">
+                <i class="bi bi-calendar-range me-2 text-primary"></i>Liquidaciones de Leche Entregada (Por Periodos)
+            </h6>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modalRegistrarLiquidacion">
+                <i class="bi bi-plus-circle me-1"></i> Nueva Liquidación
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-muted small text-uppercase">
+                        <tr>
+                            <th>Periodo</th>
+                            <th>Litros</th>
+                            <th>Precio / L</th>
+                            <th>Monto Total</th>
+                            <th>Comprador</th>
+                            <th>Estado Pago</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for liq in liquidaciones_leche %}
+                        <tr>
+                            <td class="fw-semibold text-dark">
+                                {{ liq.fecha_inicio|date:"d/m/Y" }} - {{ liq.fecha_fin|date:"d/m/Y" }}
+                            </td>
+                            <td>{{ liq.litros_totales|floatformat:2 }} L</td>
+                            <td>${{ liq.precio_por_litro|floatformat:2 }}</td>
+                            <td class="fw-bold text-dark">${{ liq.monto_total|floatformat:2 }}</td>
+                            <td>{{ liq.comprador|default:"No especificado" }}</td>
+                            <td>
+                                {% if liq.estado_pago == 'COBRADO' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1">
+                                    Cobrado ({{ liq.fecha_cobro|date:"d/m/Y" }})
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-1">
+                                    Pendiente
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if liq.estado_pago == 'PENDIENTE' %}
+                                <form method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="cobrar_liquidacion">
+                                    <input type="hidden" name="liquidacion_id" value="{{ liq.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-check2-circle me-1"></i>Marcar Cobrado
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <form method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta liquidación de leche?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="eliminar_liquidacion">
+                                    <input type="hidden" name="liquidacion_id" value="{{ liq.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4 small">
+                                No hay liquidaciones de leche registradas por periodo. Registre una entrega para controlar cobros pendientes.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -106,30 +193,30 @@
         <div class="col-lg-4 mb-4">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-white py-3">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-list-stars me-2 text-success"></i>Resumen de Ingresos</h6>
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-list-stars me-2 text-success"></i>Resumen de Flujo de Caja</h6>
                 </div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
                             <div>
-                                <span class="fw-bold d-block">Producción Lechera</span>
-                                <small class="text-muted">Ingreso total proyectado</small>
+                                <span class="fw-bold d-block">Leche Cobrada</span>
+                                <small class="text-muted">Ingreso efectivo por leche</small>
                             </div>
-                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold">${{ ingresos_leche|floatformat:2 }}</span>
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-bold">${{ ingresos_leche_cobrados|floatformat:2 }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
                             <div>
                                 <span class="fw-bold d-block">Ventas de Ganado</span>
-                                <small class="text-muted">Transacciones de venta cerradas</small>
+                                <small class="text-muted">Ventas de animales concretadas</small>
                             </div>
                             <span class="badge bg-info bg-opacity-10 text-info rounded-pill px-3 py-2 fw-bold">${{ ingresos_animales|floatformat:2 }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom-0">
                             <div>
-                                <span class="fw-bold d-block">Ingresos Totales</span>
-                                <small class="text-muted">Suma de todas las ganancias</small>
+                                <span class="fw-bold d-block">Total Disponible</span>
+                                <small class="text-muted">Saldo disponible actual</small>
                             </div>
-                            <span class="fs-5 fw-bold text-dark">${{ ingresos_totales|floatformat:2 }}</span>
+                            <span class="fs-5 fw-bold {% if dinero_disponible >= 0 %}text-success{% else %}text-danger{% endif %}">${{ dinero_disponible|floatformat:2 }}</span>
                         </li>
                     </ul>
                 </div>
@@ -183,6 +270,67 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Liquidación de Leche -->
+<div class="modal fade" id="modalRegistrarLiquidacion" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-droplet-fill me-2"></i>Registrar Liquidación de Leche
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="crear_liquidacion_leche">
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-dark">Fecha Inicio Periodo</label>
+                            <input type="date" name="fecha_inicio" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-dark">Fecha Fin Periodo</label>
+                            <input type="date" name="fecha_fin" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-dark">Litros Entregados</label>
+                            <input type="number" step="0.01" name="litros_totales" class="form-control" placeholder="0.00" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-dark">Precio / Litro ($)</label>
+                            <input type="number" step="0.01" name="precio_por_litro" class="form-control" value="{{ precio_leche_config.precio_por_litro }}" required>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-dark">Comprador / Cliente</label>
+                            <input type="text" name="comprador" class="form-control" placeholder="Ej. Lácteos del Valle">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold text-dark">Estado del Pago</label>
+                            <select name="estado_pago" class="form-select" required>
+                                <option value="PENDIENTE">Pendiente de Cobro</option>
+                                <option value="COBRADO">Cobrado Inmediatamente</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold text-dark">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2" placeholder="Notas sobre la entrega o retenciones..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-save me-1"></i> Guardar Liquidación</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

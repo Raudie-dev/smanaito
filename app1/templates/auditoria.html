@@ -26,7 +26,7 @@
                         <option value="">Todos los Módulos</option>
                         <option value="ANIMALES" {% if modulo_filtro == 'ANIMALES' %}selected{% endif %}>Animales</option>
                         <option value="REBAÑOS" {% if modulo_filtro == 'REBAÑOS' %}selected{% endif %}>Rebaños</option>
-                        <option value="ORDEÑO" {% if modulo_filtro == 'ORDEÑO' %}selected{% endif %}>Control de Ordeño</option>
+
                         <option value="SANIDAD" {% if modulo_filtro == 'SANIDAD' %}selected{% endif %}>Sanidad</option>
                         <option value="VENTAS" {% if modulo_filtro == 'VENTAS' %}selected{% endif %}>Ventas</option>
                         <option value="FINANZAS" {% if modulo_filtro == 'FINANZAS' %}selected{% endif %}>Finanzas</option>
@@ -81,7 +81,6 @@
                             <td>
                                 <span class="badge 
                                     {% if log.modulo == 'ANIMALES' %}bg-primary
-                                    {% elif log.modulo == 'ORDEÑO' %}bg-success
                                     {% elif log.modulo == 'SANIDAD' %}bg-danger
                                     {% elif log.modulo == 'VENTAS' %}bg-info text-dark
                                     {% elif log.modulo == 'FINANZAS' %}bg-warning text-dark
