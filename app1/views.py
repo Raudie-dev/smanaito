@@ -447,7 +447,7 @@ def registro(request):
     return render(request, 'registro.html', context)
 
 
-def rebaño(request):
+def rebano(request):
     user_id = request.session.get('user')
     if not user_id:
         messages.error(request, 'Debe iniciar sesión primero')
