@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Cargar variables de entorno desde el archivo .env
 load_dotenv(BASE_DIR / '.env')
 
-ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+ENVIRONMENT = 'development'
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY:
@@ -28,7 +28,8 @@ if not SECRET_KEY:
         raise ValueError("CRITICAL: SECRET_KEY must be set in environment variables for production!")
     SECRET_KEY = 'django-insecure-dev-key-change-me'
 
-DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
+# Cambia a False para ver tus páginas 404/500 y habilitar seguridad
+DEBUG = False
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
