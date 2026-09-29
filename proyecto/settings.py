@@ -94,15 +94,12 @@ WSGI_APPLICATION = 'proyecto.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+# Lee DATABASE_URL del .env (soporta sqlite y postgres con dj-database-url)
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'raudajly_samanito',
-        'USER': 'raudajly_samanito',
-        'PASSWORD': 'KZo1=P]^Wlq?y*s5',
-        'HOST': 'localhost',
-        'PORT': '3306',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+    )
 }
 
 
