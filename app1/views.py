@@ -6,7 +6,7 @@ from django.http import JsonResponse, HttpResponse
 import datetime
 import json
 import secrets
-from .models import User, Finca, Animal, Rebaño, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, GastoRecurrente, LiquidacionLeche, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento, ProtocoloAlimentacion, LecturaComedero, OrdenCargaMixer, ServicioReproductivo, DiagnosticoGestacion, RegistroParto, Potrero, RotacionPotrero, ArticuloInventario, MovimientoInventario, CatalogoSemen, Empleado, PagoNomina, WebAuthnCredential
+from .models import User, Finca, Animal, Rebaño, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, GastoRecurrente, LiquidacionLeche, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento, ProtocoloAlimentacion, LecturaComedero, OrdenCargaMixer, ServicioReproductivo, DiagnosticoGestacion, RegistroParto, Potrero, RotacionPotrero, ArticuloInventario, MovimientoInventario, CatalogoSemen, Empleado, PagoNomina, WebAuthnCredential, RegistroOrdeno
 
 def registrar_log(usuario, finca_id, accion, modulo, descripcion):
     try:
@@ -1387,27 +1387,37 @@ def perfil(request):
     if not user_id:
         messages.error(request, 'Debe iniciar sesión primero')
         return redirect('login')
-        
+
     user = User.objects.get(id=user_id)
     finca_activa_id, fincas_usuario = get_finca_context(request, user)
-    
-    # Obtener suscripción de app2
+
+    # Obtener suscripción y plan de app2
     suscripcion = None
+    limite_fincas = 1  # límite por defecto si no hay plan
     try:
         from app2.models import Suscripcion
         suscripcion, _ = Suscripcion.objects.get_or_create(usuario=user)
+        if suscripcion.plan_obj:
+            limite_fincas = suscripcion.plan_obj.limite_fincas
+        else:
+            # Sin plan_obj: Trial = 1 finca, resto tienen más
+            plan_limites = {'TRIAL': 1, 'BASICO': 1, 'PLUS': 3, 'PREMIUM': 10, 'VIP': 999}
+            limite_fincas = plan_limites.get(suscripcion.plan, 1)
     except Exception:
         pass
-        
+
     config, _ = ConfiguracionUsuario.objects.get_or_create(user=user)
-    
+    todas_las_fincas = Finca.objects.filter(usuario=user)
+    fincas_count = todas_las_fincas.count()
+    puede_crear_finca = fincas_count < limite_fincas
+
     if request.method == 'POST':
         action = request.POST.get('action')
-        
+
         if action == 'actualizar_datos':
             nombre = request.POST.get('nombre')
             email = request.POST.get('email')
-            
+
             if User.objects.exclude(id=user.id).filter(nombre=nombre).exists():
                 messages.error(request, 'El nombre de usuario ya está en uso')
             elif email and User.objects.exclude(id=user.id).filter(email=email).exists():
@@ -1418,23 +1428,43 @@ def perfil(request):
                 user.save()
                 registrar_log(user, finca_activa_id, 'MODIFICACION', 'SEGURIDAD', f"Actualizó sus datos básicos de cuenta (Nombre: {nombre})")
                 messages.success(request, 'Datos de cuenta actualizados correctamente')
-                
+
+        elif action == 'crear_finca':
+            nombre_finca = request.POST.get('nombre_finca', '').strip()
+            if not nombre_finca:
+                messages.error(request, 'El nombre de la finca no puede estar vacío')
+            elif not puede_crear_finca:
+                plan_nombre = suscripcion.get_plan_display() if suscripcion else 'Trial'
+                messages.error(
+                    request,
+                    f'Tu plan {plan_nombre} solo permite {limite_fincas} finca(s). '
+                    f'Ya tienes {fincas_count}. Contacta a soporte para mejorar tu plan.'
+                )
+            else:
+                nueva_finca = Finca.objects.create(usuario=user, nombre=nombre_finca)
+                request.session['finca_activa'] = nueva_finca.id
+                registrar_log(user, nueva_finca.id, 'CREACION', 'ANIMALES', f"Creó la finca '{nombre_finca}'")
+                messages.success(request, f'Finca "{nombre_finca}" creada exitosamente y establecida como activa')
+
         elif action == 'cambiar_password':
             current_pw = request.POST.get('current_password')
             new_pw = request.POST.get('new_password')
             confirm_pw = request.POST.get('confirm_password')
-            
+
             if not check_password(current_pw, user.password) and not (not user.password.startswith('pbkdf2_') and user.password == current_pw):
                 messages.error(request, 'La contraseña actual es incorrecta')
             elif new_pw != confirm_pw:
                 messages.error(request, 'La nueva contraseña y su confirmación no coinciden')
+            elif len(new_pw) < 6:
+                messages.error(request, 'La nueva contraseña debe tener al menos 6 caracteres')
             else:
                 user.password = make_password(new_pw)
                 user.save()
                 registrar_log(user, finca_activa_id, 'MODIFICACION', 'SEGURIDAD', "Actualizó su contraseña de acceso")
                 messages.success(request, 'Contraseña cambiada correctamente')
-                
+
         elif action == 'guardar_config':
+            # Configuración de crianza (existente)
             config.usar_mamanto = 'usar_mamanto' in request.POST
             config.usar_destete = 'usar_destete' in request.POST
             config.meses_mamanto = int(request.POST.get('meses_mamanto', 3))
@@ -1442,16 +1472,37 @@ def perfil(request):
             config.save()
             registrar_log(user, finca_activa_id, 'CONFIGURACION', 'SEGURIDAD', "Modificó los parámetros de crianza y destete")
             messages.success(request, 'Configuración de crianza guardada')
-            
+
+        elif action == 'guardar_preferencias':
+            config.unidad_peso = request.POST.get('unidad_peso', 'KG')
+            config.formato_fecha = request.POST.get('formato_fecha', 'DMY')
+            config.moneda_simbolo = request.POST.get('moneda_simbolo', '$') or '$'
+            config.mostrar_codigo = 'mostrar_codigo' in request.POST
+            try:
+                config.animales_por_pag = int(request.POST.get('animales_por_pag', 25))
+            except (ValueError, TypeError):
+                config.animales_por_pag = 25
+            config.tema_preferido = request.POST.get('tema_preferido', 'CLARO')
+            config.notif_vencimientos = 'notif_vencimientos' in request.POST
+            config.notif_vacunas = 'notif_vacunas' in request.POST
+            config.notif_partos = 'notif_partos' in request.POST
+            config.save()
+            registrar_log(user, finca_activa_id, 'CONFIGURACION', 'SEGURIDAD', "Modificó las preferencias de visualización y notificaciones")
+            messages.success(request, 'Preferencias guardadas correctamente')
+
         return redirect('perfil')
-        
+
     webauthn_creds = WebAuthnCredential.objects.filter(user=user)
     context = {
         'fincas_usuario': fincas_usuario,
+        'todas_las_fincas': todas_las_fincas,
         'user_profile': user,
         'suscripcion': suscripcion,
         'config': config,
         'webauthn_creds': webauthn_creds,
+        'puede_crear_finca': puede_crear_finca,
+        'limite_fincas_plan': limite_fincas,
+        'fincas_count': fincas_count,
     }
     return render(request, 'perfil.html', context)
 
@@ -2449,3 +2500,113 @@ def hoja_vida(request, animal_id):
         'timeline': timeline
     }
     return render(request, 'hoja_vida.html', context)
+
+def ordeno(request):
+    user_id = request.session.get('user')
+    if not user_id:
+        return redirect('login')
+    user = User.objects.get(id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, user)
+    if not finca_activa_id:
+        return redirect('control')
+
+    finca_activa = Finca.objects.get(id=finca_activa_id)
+    precio_config, _ = PrecioLecheConfig.objects.get_or_create(finca=finca_activa, defaults={'precio_por_litro': 0.50})
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'guardar_ordeno':
+            fecha = request.POST.get('fecha') or datetime.date.today()
+            turno = request.POST.get('turno', 'MAÑANA')
+            rebano_id = request.POST.get('rebano_id') or None
+            animal_id = request.POST.get('animal_id') or None
+            vacas = int(request.POST.get('vacas_ordenadas') or 1)
+            litros = float(request.POST.get('litros_leche') or 0.0)
+            precio = float(request.POST.get('precio_litro') or precio_config.precio_por_litro)
+            temp = request.POST.get('temperatura_tanque')
+            temp_val = float(temp) if temp else None
+            obs = request.POST.get('observaciones', '')
+
+            try:
+                RegistroOrdeno.objects.create(
+                    finca_id=finca_activa_id,
+                    usuario=user,
+                    fecha=fecha,
+                    turno=turno,
+                    rebaño_id=rebano_id,
+                    animal_id=animal_id,
+                    vacas_ordenadas=vacas,
+                    litros_leche=litros,
+                    precio_litro=precio,
+                    temperatura_tanque=temp_val,
+                    observaciones=obs
+                )
+                registrar_log(user, finca_activa_id, 'CREACION', 'ORDEÑO', f'Registro de ordeño {litros}L')
+                messages.success(request, f'Se registraron {litros} L de leche en el ordeño de la {turno.lower()}.')
+            except Exception as e:
+                messages.error(request, f'Error al guardar ordeño: {e}')
+
+        elif action == 'eliminar_ordeno':
+            reg_id = request.POST.get('registro_id')
+            try:
+                reg = RegistroOrdeno.objects.get(id=reg_id, finca_id=finca_activa_id)
+                reg.delete()
+                messages.success(request, 'Registro de ordeño eliminado.')
+            except Exception as e:
+                messages.error(request, f'Error al eliminar: {e}')
+
+        elif action == 'actualizar_precio':
+            precio_val = request.POST.get('precio_por_litro')
+            if precio_val:
+                precio_config.precio_por_litro = float(precio_val)
+                precio_config.save()
+                messages.success(request, 'Precio base por litro de leche actualizado.')
+
+        return redirect('ordeno')
+
+    # GET
+    registros = RegistroOrdeno.objects.filter(finca_id=finca_activa_id).order_by('-fecha', '-id')
+    rebaños = Rebaño.objects.filter(finca_id=finca_activa_id)
+    animales = Animal.objects.filter(finca_id=finca_activa_id, sexo='HEMBRA')
+
+    # KPIs
+    today = datetime.date.today()
+    registros_hoy = registros.filter(fecha=today)
+    litros_hoy = registros_hoy.aggregate(Sum('litros_leche'))['litros_leche__sum'] or 0.0
+    vacas_hoy = registros_hoy.aggregate(Sum('vacas_ordenadas'))['vacas_ordenadas__sum'] or 0
+    promedio_hoy = round(float(litros_hoy) / float(vacas_hoy), 2) if vacas_hoy > 0 else 0.0
+
+    inicio_mes = today.replace(day=1)
+    registros_mes = registros.filter(fecha__gte=inicio_mes)
+    litros_mes = registros_mes.aggregate(Sum('litros_leche'))['litros_leche__sum'] or 0.0
+    ingreso_mes = round(float(litros_mes) * float(precio_config.precio_por_litro), 2)
+
+    # Chart data (last 14 days)
+    fechas_chart = []
+    litros_chart = []
+    for i in range(13, -1, -1):
+        f = today - datetime.timedelta(days=i)
+        f_str = f.strftime('%d/%m')
+        l_day = registros.filter(fecha=f).aggregate(Sum('litros_leche'))['litros_leche__sum'] or 0.0
+        fechas_chart.append(f_str)
+        litros_chart.append(float(l_day))
+
+    context = {
+        'user': user,
+        'fincas_usuario': fincas_usuario,
+        'finca_activa_id': finca_activa_id,
+        'finca_activa': finca_activa,
+        'registros': registros,
+        'rebaños': rebaños,
+        'animales': animales,
+        'precio_config': precio_config,
+        'litros_hoy': litros_hoy,
+        'vacas_hoy': vacas_hoy,
+        'promedio_hoy': promedio_hoy,
+        'litros_mes': litros_mes,
+        'ingreso_mes': ingreso_mes,
+        'fechas_chart_json': json.dumps(fechas_chart),
+        'litros_chart_json': json.dumps(litros_chart),
+    }
+    return render(request, 'ordeno.html', context)
+

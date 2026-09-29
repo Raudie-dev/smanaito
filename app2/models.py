@@ -24,6 +24,7 @@ class PlanSaaS(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     # Módulos permitidos
+    mod_ordeno = models.BooleanField(default=True, verbose_name="Módulo de Ordeño")
     mod_reproduccion = models.BooleanField(default=True, verbose_name="Módulo de Reproducción")
     mod_genetica = models.BooleanField(default=True, verbose_name="Módulo de Genética")
     mod_engorde = models.BooleanField(default=True, verbose_name="Módulo de Engorde")

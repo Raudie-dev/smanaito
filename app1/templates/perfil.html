@@ -1,266 +1,430 @@
 {% extends 'base.html' %}
-{% block section_title %}Perfil y Configuración de Cuenta{% endblock %}
+{% block title %}Mi Perfil y Configuración{% endblock %}
+{% block section_title %}Mi Perfil y Configuración{% endblock %}
 
 {% block content %}
-<div class="container-fluid p-0">
-    <div class="mb-4 mt-2">
-        <h5 class="fw-bold mb-1">Mi Cuenta</h5>
-        <p class="text-muted small mb-0">Gestione su información de perfil, configuración del establo y plan de suscripción.</p>
-    </div>
 
-    {% if messages %}
-        {% for message in messages %}
+{% if messages %}
+    {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
             {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        {% endfor %}
-    {% endif %}
+    {% endfor %}
+{% endif %}
 
-    <div class="row">
-        <!-- Navegación de Pestañas (Izquierda) -->
-        <div class="col-lg-3 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-3">
-                    <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
-                        <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle me-3" style="font-size: 1.5rem; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-person-circle"></i>
-                        </div>
-                        <div>
-                            <h6 class="fw-bold mb-0 text-dark">{{ user_profile.nombre }}</h6>
-                            <span class="text-muted small">Ganadero Registrado</span>
-                        </div>
+<!-- Tarjetas de navegación por pestaña (Bootstrap Pills horizontal) -->
+<ul class="nav nav-pills mb-4 mt-3" id="perfilTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-cuenta-btn" data-bs-toggle="pill" data-bs-target="#tab-cuenta" type="button" role="tab">
+            <i class="bi bi-person-lines-fill me-1"></i> Mi Cuenta
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-config-btn" data-bs-toggle="pill" data-bs-target="#tab-config" type="button" role="tab">
+            <i class="bi bi-sliders me-1"></i> Configuración General
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-seguridad-btn" data-bs-toggle="pill" data-bs-target="#tab-seguridad" type="button" role="tab">
+            <i class="bi bi-shield-lock me-1"></i> Seguridad y Acceso
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="perfilTabsContent">
+
+
+    <!-- ═══════════════════════════════════════
+         PESTAÑA 1: MI CUENTA
+    ═══════════════════════════════════════ -->
+    <div class="tab-pane fade show active" id="tab-cuenta" role="tabpanel">
+        <div class="row g-4">
+
+            <!-- Datos personales -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-person-circle me-2 text-success"></i>Información del Usuario</h6>
                     </div>
-                    
-                    <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist">
-                        <button class="nav-link active text-start py-2.5 px-3 mb-2" id="v-pills-datos-tab" data-bs-toggle="pill" data-bs-target="#v-pills-datos" type="button" role="tab">
-                            <i class="bi bi-person-lines-fill me-2"></i> Datos de Cuenta
-                        </button>
-                        <button class="nav-link text-start py-2.5 px-3 mb-2" id="v-pills-seguridad-tab" data-bs-toggle="pill" data-bs-target="#v-pills-seguridad" type="button" role="tab">
-                            <i class="bi bi-shield-lock me-2"></i> Seguridad y Acceso
-                        </button>
+                    <div class="card-body">
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="actualizar_datos">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">Nombre de Usuario</label>
+                                <input type="text" name="nombre" class="form-control" value="{{ user_profile.nombre }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">Correo Electrónico</label>
+                                <input type="email" name="email" class="form-control" value="{{ user_profile.email|default:'' }}" placeholder="correo@ejemplo.com">
+                            </div>
+                            <button type="submit" class="btn btn-success px-4">
+                                <i class="bi bi-save me-1"></i> Guardar Cambios
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Contenido de Pestañas (Derecha) -->
-        <div class="col-lg-9">
-            <div class="tab-content" id="v-pills-tabContent">
-                <!-- Pestaña 1: Datos de Cuenta -->
-                <div class="tab-pane fade show active" id="v-pills-datos" role="tabpanel">
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-header bg-white py-3">
-                            <h6 class="mb-0 fw-bold"><i class="bi bi-person-lines-fill me-2 text-success"></i>Información del Usuario</h6>
+            <!-- Suscripción activa -->
+            <div class="col-lg-6">
+                {% if suscripcion %}
+                <div class="card shadow-sm border-0 border-start border-primary border-4">
+                    <div class="card-body p-4">
+                        <h6 class="text-uppercase text-secondary fw-bold mb-2" style="font-size: 0.72rem; letter-spacing: 1px;">Suscripción SaaS</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <h4 class="fw-bold mb-0">Plan {{ suscripcion.get_plan_display }}</h4>
+                            <span class="badge {% if suscripcion.estado == 'ACTIVA' %}bg-success{% else %}bg-danger{% endif %} py-2 px-3">
+                                {{ suscripcion.get_estado_display }}
+                            </span>
                         </div>
-                        <div class="card-body">
-                            <form method="POST">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="actualizar_datos">
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label text-muted small fw-bold">Nombre de Usuario</label>
-                                        <input type="text" name="nombre" class="form-control" value="{{ user_profile.nombre }}" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label text-muted small fw-bold">Correo Electrónico</label>
-                                        <input type="email" name="email" class="form-control" value="{{ user_profile.email|default:'' }}" placeholder="correo@ejemplo.com">
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-success px-4"><i class="bi bi-save me-1"></i> Guardar Cambios</button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Estado de Suscripción -->
-                    {% if suscripcion %}
-                    <div class="card shadow-sm border-0 mb-4 border-start border-primary border-4">
-                        <div class="card-body p-4">
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <div>
-                                    <h6 class="text-uppercase text-secondary fw-bold mb-2" style="font-size: 0.75rem; letter-spacing: 1px;">Suscripción SaaS Activa</h6>
-                                    <h3 class="fw-bold mb-1">Plan {{ suscripcion.get_plan_display }}</h3>
-                                    <p class="text-muted small mb-0">Estado: 
-                                        <span class="badge {% if suscripcion.estado == 'ACTIVA' %}bg-success{% else %}bg-danger{% endif %} py-1.5 px-2">
-                                            {{ suscripcion.get_estado_display }}
-                                        </span>
-                                    </p>
-                                </div>
-                                <div class="text-md-end">
-                                    <p class="mb-1 text-muted small">Miembro desde: {{ suscripcion.fecha_inicio|date:"d/m/Y" }}</p>
-                                    {% if suscripcion.fecha_vencimiento %}
-                                    <p class="mb-0 text-muted small">Vence el: <span class="fw-bold">{{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}</span></p>
-                                    {% else %}
-                                    <p class="mb-0 text-muted small">Renovación automática</p>
-                                    {% endif %}
-                                </div>
+                        <div class="row text-muted small">
+                            <div class="col-6">
+                                <p class="mb-1"><i class="bi bi-calendar-check me-1"></i> Miembro desde:<br>
+                                <strong class="text-dark">{{ suscripcion.fecha_inicio|date:"d/m/Y" }}</strong></p>
                             </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-
-
-
-                <!-- Pestaña 3: Seguridad y Acceso -->
-                <div class="tab-pane fade" id="v-pills-seguridad" role="tabpanel">
-                    <!-- Huella Dactilar / Biometría PWA -->
-                    <div class="card shadow-sm border-0 mb-4 border-start border-success border-4">
-                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-fingerprint me-2 text-success fs-5"></i>Acceso Biométrico (Huella Digital PWA)</h6>
-                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1">Biometría WebAuthn</span>
-                        </div>
-                        <div class="card-body">
-                            <p class="text-muted small">Registra la huella digital o datos biométricos de tu teléfono móvil / dispositivo para iniciar sesión instantáneamente sin escribir la contraseña.</p>
-                            
-                            <div class="d-flex align-items-center gap-3 mb-4">
-                                <button type="button" id="btnRegisterFingerprint" class="btn btn-success px-4 py-2 fw-semibold">
-                                    <i class="bi bi-fingerprint me-1 fs-5 align-middle"></i> Registrar Huella Digital en este Dispositivo
-                                </button>
+                            <div class="col-6">
+                                <p class="mb-1"><i class="bi bi-calendar-x me-1"></i> Vence el:<br>
+                                <strong class="text-dark">{% if suscripcion.fecha_vencimiento %}{{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}{% else %}Sin fecha{% endif %}</strong></p>
                             </div>
-
-                            <h6 class="fw-bold small text-muted text-uppercase mb-3">Dispositivos y Huellas Registradas</h6>
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="table-light small">
-                                        <tr>
-                                            <th>Dispositivo</th>
-                                            <th>Fecha de Registro</th>
-                                            <th>Usos</th>
-                                            <th class="text-end">Acción</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for cred in webauthn_creds %}
-                                        <tr>
-                                            <td class="fw-bold text-dark">
-                                                <i class="bi bi-phone me-2 text-primary"></i>{{ cred.device_name }}
-                                            </td>
-                                            <td class="text-muted small">{{ cred.created_at|date:"d/m/Y H:i" }}</td>
-                                            <td><span class="badge bg-light text-dark border">{{ cred.sign_count }} accesos</span></td>
-                                            <td class="text-end">
-                                                <a href="{% url 'webauthn_delete' cred.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar esta huella de acceso?')">
-                                                    <i class="bi bi-trash"></i>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="4" class="text-center text-muted py-3 small">
-                                                No tienes huellas registradas aún. Presiona el botón verde arriba para vincular tu dispositivo.
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                            <div class="col-6 mt-2">
+                                <p class="mb-0"><i class="bi bi-house me-1"></i> Fincas:<br>
+                                <strong class="text-dark">{{ fincas_count }} / {{ limite_fincas_plan }}</strong></p>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Cambiar Contraseña -->
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-white py-3">
-                            <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-danger"></i>Cambiar Contraseña de Acceso</h6>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="cambiar_password">
-                                <div class="mb-3">
-                                    <label class="form-label text-muted small fw-bold">Contraseña Actual</label>
-                                    <input type="password" name="current_password" class="form-control" required placeholder="••••••••">
-                                </div>
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label text-muted small fw-bold">Nueva Contraseña</label>
-                                        <input type="password" name="new_password" class="form-control" required placeholder="Mínimo 6 caracteres">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label text-muted small fw-bold">Confirmar Nueva Contraseña</label>
-                                        <input type="password" name="confirm_password" class="form-control" required placeholder="Reescriba nueva contraseña">
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-danger px-4"><i class="bi bi-key me-1"></i> Actualizar Contraseña</button>
-                            </form>
                         </div>
                     </div>
                 </div>
+                {% else %}
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex flex-column align-items-center justify-content-center text-center py-5">
+                        <i class="bi bi-star text-warning" style="font-size: 2.5rem;"></i>
+                        <p class="text-muted mt-2 mb-0">No hay suscripción registrada.</p>
+                    </div>
+                </div>
+                {% endif %}
             </div>
+
         </div>
     </div>
-</div>
+
+
+    <!-- ═══════════════════════════════════════
+         PESTAÑA 2: CONFIGURACIÓN GENERAL
+    ═══════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-config" role="tabpanel">
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="guardar_preferencias">
+
+            <div class="row g-4">
+
+                <!-- Visualización -->
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-eye me-2 text-primary"></i>Visualización de Datos</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label text-muted small fw-bold">Unidad de Peso</label>
+                                    <select name="unidad_peso" class="form-select">
+                                        <option value="KG" {% if config.unidad_peso == 'KG' %}selected{% endif %}>Kilogramos (kg)</option>
+                                        <option value="LB" {% if config.unidad_peso == 'LB' %}selected{% endif %}>Libras (lb)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-muted small fw-bold">Formato de Fecha</label>
+                                    <select name="formato_fecha" class="form-select">
+                                        <option value="DMY" {% if config.formato_fecha == 'DMY' %}selected{% endif %}>DD/MM/YYYY</option>
+                                        <option value="MDY" {% if config.formato_fecha == 'MDY' %}selected{% endif %}>MM/DD/YYYY</option>
+                                        <option value="YMD" {% if config.formato_fecha == 'YMD' %}selected{% endif %}>YYYY-MM-DD</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-muted small fw-bold">Símbolo de Moneda</label>
+                                    <input type="text" name="moneda_simbolo" class="form-control" value="{{ config.moneda_simbolo }}" maxlength="5" placeholder="$">
+                                    <div class="form-text">Ej: $, Bs, €, COP$</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-muted small fw-bold">Animales por Página</label>
+                                    <select name="animales_por_pag" class="form-select">
+                                        {% for val, label in config.ANIMALES_PAG_CHOICES %}
+                                        <option value="{{ val }}" {% if config.animales_por_pag == val %}selected{% endif %}>{{ label }} animales</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <div class="form-check form-switch fs-5 pb-1">
+                                        <input class="form-check-input" type="checkbox" id="mostrarCodigo" name="mostrar_codigo" {% if config.mostrar_codigo %}checked{% endif %} role="switch">
+                                        <label class="form-check-label fw-bold small" for="mostrarCodigo" style="font-size: 0.875rem !important;">Mostrar Código del Animal</label>
+                                        <div class="form-text">Si no está activo muestra el nombre.</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-muted small fw-bold">Tema Preferido <span class="badge bg-secondary bg-opacity-25 text-secondary" style="font-size:0.65rem;">Próximamente</span></label>
+                                    <select name="tema_preferido" class="form-select">
+                                        <option value="CLARO" {% if config.tema_preferido == 'CLARO' %}selected{% endif %}>☀️ Claro</option>
+                                        <option value="OSCURO" {% if config.tema_preferido == 'OSCURO' %}selected{% endif %}>🌙 Oscuro</option>
+                                        <option value="AUTO" {% if config.tema_preferido == 'AUTO' %}selected{% endif %}>⚙️ Automático</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Crianza y Destete -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-heart-pulse me-2 text-danger"></i>Crianza y Destete</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label text-muted small fw-bold mb-0">Período de Mamantar</label>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" id="usarMamanto" name="usar_mamanto" {% if config.usar_mamanto %}checked{% endif %} role="switch">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text">Meses</span>
+                                    <input type="number" name="meses_mamanto" class="form-control" value="{{ config.meses_mamanto }}" min="1" max="12">
+                                </div>
+                            </div>
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label text-muted small fw-bold mb-0">Período de Destete</label>
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" id="usarDestete" name="usar_destete" {% if config.usar_destete %}checked{% endif %} role="switch">
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text">Meses</span>
+                                    <input type="number" name="meses_destete" class="form-control" value="{{ config.meses_destete }}" min="1" max="24">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notificaciones -->
+                <div class="col-lg-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-bell me-2 text-warning"></i>Alertas del Dashboard</h6>
+                        </div>
+                        <div class="card-body d-flex flex-column gap-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="fw-bold mb-0 small">Alertas de Suscripción</p>
+                                    <p class="text-muted mb-0" style="font-size: 0.8rem;">Aviso cuando el plan esté por vencer.</p>
+                                </div>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" id="notifVenc" name="notif_vencimientos" {% if config.notif_vencimientos %}checked{% endif %} role="switch">
+                                </div>
+                            </div>
+                            <hr class="my-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="fw-bold mb-0 small">Recordatorios de Vacunación</p>
+                                    <p class="text-muted mb-0" style="font-size: 0.8rem;">Planes pendientes o próximos.</p>
+                                </div>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" id="notifVac" name="notif_vacunas" {% if config.notif_vacunas %}checked{% endif %} role="switch">
+                                </div>
+                            </div>
+                            <hr class="my-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="fw-bold mb-0 small">Alertas de Partos Próximos</p>
+                                    <p class="text-muted mb-0" style="font-size: 0.8rem;">Vacas preñadas con parto estimado &lt;2 semanas.</p>
+                                </div>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" id="notifPartos" name="notif_partos" {% if config.notif_partos %}checked{% endif %} role="switch">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success px-5">
+                        <i class="bi bi-save me-1"></i> Guardar Configuración
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════
+         PESTAÑA 3: SEGURIDAD Y ACCESO
+    ═══════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-seguridad" role="tabpanel">
+        <div class="row g-4">
+
+            <!-- Huella digital -->
+            <div class="col-12">
+                <div class="card shadow-sm border-0 border-start border-success border-4">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-fingerprint me-2 text-success fs-5"></i>Acceso Biométrico (Huella Digital)</h6>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">WebAuthn</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">Registra la huella digital o face ID de tu dispositivo para iniciar sesión sin contraseña.</p>
+                        <button type="button" id="btnRegisterFingerprint" class="btn btn-success fw-semibold px-4 mb-4">
+                            <i class="bi bi-fingerprint me-1 fs-5 align-middle"></i> Registrar Huella en este Dispositivo
+                        </button>
+
+                        <h6 class="fw-bold small text-muted text-uppercase mb-3">Dispositivos Registrados</h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light small">
+                                    <tr>
+                                        <th>Dispositivo</th>
+                                        <th>Fecha de Registro</th>
+                                        <th>Usos</th>
+                                        <th class="text-end">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cred in webauthn_creds %}
+                                    <tr>
+                                        <td class="fw-bold text-dark"><i class="bi bi-phone me-2 text-primary"></i>{{ cred.device_name }}</td>
+                                        <td class="text-muted small">{{ cred.created_at|date:"d/m/Y H:i" }}</td>
+                                        <td><span class="badge bg-light text-dark border">{{ cred.sign_count }} accesos</span></td>
+                                        <td class="text-end">
+                                            <a href="{% url 'webauthn_delete' cred.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar esta huella?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-3 small">
+                                            No tienes huellas registradas aún.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cambiar contraseña -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2 text-danger"></i>Cambiar Contraseña</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="cambiar_password">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">Contraseña Actual</label>
+                                <input type="password" name="current_password" class="form-control" required placeholder="••••••••">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">Nueva Contraseña</label>
+                                <input type="password" name="new_password" class="form-control" required placeholder="Mínimo 6 caracteres">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label text-muted small fw-bold">Confirmar Nueva Contraseña</label>
+                                <input type="password" name="confirm_password" class="form-control" required placeholder="Repita la nueva contraseña">
+                            </div>
+                            <button type="submit" class="btn btn-danger px-4">
+                                <i class="bi bi-key me-1"></i> Actualizar Contraseña
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sesión -->
+            <div class="col-lg-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-box-arrow-right me-2 text-secondary"></i>Sesión Activa</h6>
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <p class="text-muted small mb-4">Sesión iniciada como <strong>{{ user_profile.nombre }}</strong>. Cierra sesión si estás en un dispositivo compartido.</p>
+                        <a href="{% url 'login' %}" class="btn btn-outline-danger" onclick="return confirm('¿Cerrar sesión?')">
+                            <i class="bi bi-box-arrow-right me-1"></i> Cerrar Sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div><!-- /.tab-content -->
+
 
 <script>
-    if (window.PublicKeyCredential && window.isSecureContext) {
-        function bufferToBase64Url(buffer) {
-            return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)))
-                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        }
-
-        function base64UrlToBuffer(base64url) {
-            const padding = '='.repeat((4 - base64url.length % 4) % 4);
-            const base64 = (base64url + padding).replace(/\-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray.buffer;
-        }
-
-        document.getElementById('btnRegisterFingerprint')?.addEventListener('click', async function() {
-            try {
-                const optRes = await fetch("{% url 'webauthn_register_options' %}");
-                const options = await optRes.json();
-
-                const challengeBuffer = base64UrlToBuffer(options.challenge);
-                const userIdBuffer = new TextEncoder().encode(options.user.id);
-
-                const credential = await navigator.credentials.create({
-                    publicKey: {
-                        challenge: challengeBuffer,
-                        rp: options.rp,
-                        user: {
-                            id: userIdBuffer,
-                            name: options.user.name,
-                            displayName: options.user.displayName
-                        },
-                        pubKeyCredParams: options.pubKeyCredParams,
-                        authenticatorSelection: options.authenticatorSelection,
-                        timeout: options.timeout
-                    }
-                });
-
-                const rawId = bufferToBase64Url(credential.rawId);
-                const deviceName = prompt("Ingresa un nombre para este dispositivo:", "Mi Teléfono Móvil") || "Dispositivo Móvil";
-
-                const verifyRes = await fetch("{% url 'webauthn_register_verify' %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: JSON.stringify({
-                        id: credential.id,
-                        rawId: rawId,
-                        device_name: deviceName
-                    })
-                });
-
-                const result = await verifyRes.json();
-                if (result.success) {
-                    alert('¡Huella registrada con éxito! Ya puedes iniciar sesión con tu huella digital.');
-                    window.location.reload();
-                } else {
-                    alert(result.error || 'Error al registrar huella');
-                }
-            } catch (err) {
-                console.error(err);
-                if (err.name !== 'NotAllowedError') {
-                    alert('No se pudo registrar la huella digital: ' + (err.message || 'Error desconocido'));
-                }
-            }
-        });
+// Mantener pestaña activa al recargar tras POST
+const TAB_KEY = 'perfilTab';
+document.addEventListener('DOMContentLoaded', () => {
+    const saved = localStorage.getItem(TAB_KEY);
+    if (saved) {
+        const btn = document.querySelector(`[data-bs-target="${saved}"]`);
+        if (btn) new bootstrap.Tab(btn).show();
     }
+    document.querySelectorAll('#perfilTabs button').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', () => localStorage.setItem(TAB_KEY, btn.dataset.bsTarget));
+    });
+});
+
+// Biometría WebAuthn
+if (window.PublicKeyCredential && window.isSecureContext) {
+    function bufferToBase64Url(buffer) {
+        return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+    function base64UrlToBuffer(base64url) {
+        const padding = '='.repeat((4 - base64url.length % 4) % 4);
+        const base64 = (base64url + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+        return outputArray.buffer;
+    }
+
+    document.getElementById('btnRegisterFingerprint')?.addEventListener('click', async function() {
+        try {
+            const optRes = await fetch("{% url 'webauthn_register_options' %}");
+            const options = await optRes.json();
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: base64UrlToBuffer(options.challenge),
+                    rp: options.rp,
+                    user: { id: new TextEncoder().encode(options.user.id), name: options.user.name, displayName: options.user.displayName },
+                    pubKeyCredParams: options.pubKeyCredParams,
+                    authenticatorSelection: options.authenticatorSelection,
+                    timeout: options.timeout
+                }
+            });
+            const deviceName = prompt("Nombre para este dispositivo:", "Mi Teléfono") || "Dispositivo";
+            const verifyRes = await fetch("{% url 'webauthn_register_verify' %}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ id: credential.id, rawId: bufferToBase64Url(credential.rawId), device_name: deviceName })
+            });
+            const result = await verifyRes.json();
+            if (result.success) { alert('¡Huella registrada con éxito!'); window.location.reload(); }
+            else alert(result.error || 'Error al registrar');
+        } catch (err) {
+            if (err.name !== 'NotAllowedError') alert('Error: ' + (err.message || 'desconocido'));
+        }
+    });
+}
 </script>
+
 {% endblock %}

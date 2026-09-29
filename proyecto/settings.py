@@ -31,7 +31,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-solo-par
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = "*"
+# En desarrollo acepta cualquier host; en producción acepta cualquier host
+ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
     'https://demos.raudie.net,https://*.onrender.com'

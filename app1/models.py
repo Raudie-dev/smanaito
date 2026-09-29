@@ -148,14 +148,35 @@ class Animal(models.Model):
         return f"{self.codigo} - {self.nombre}"
 
 class ConfiguracionUsuario(models.Model):
+    UNIDAD_PESO_CHOICES = [('KG', 'Kilogramos (kg)'), ('LB', 'Libras (lb)')]
+    FORMATO_FECHA_CHOICES = [('DMY', 'DD/MM/YYYY'), ('MDY', 'MM/DD/YYYY'), ('YMD', 'YYYY-MM-DD')]
+    TEMA_CHOICES = [('CLARO', 'Claro'), ('OSCURO', 'Oscuro'), ('AUTO', 'Automático (sistema)')]
+    ANIMALES_PAG_CHOICES = [(10, '10'), (25, '25'), (50, '50'), (100, '100')]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='configuracion')
+
+    # Configuración de crianza
     usar_mamanto = models.BooleanField(default=True)
     usar_destete = models.BooleanField(default=True)
     meses_mamanto = models.IntegerField(default=3)
     meses_destete = models.IntegerField(default=7)
 
+    # Preferencias de visualización
+    unidad_peso = models.CharField(max_length=2, choices=UNIDAD_PESO_CHOICES, default='KG')
+    formato_fecha = models.CharField(max_length=3, choices=FORMATO_FECHA_CHOICES, default='DMY')
+    moneda_simbolo = models.CharField(max_length=5, default='$', help_text="Símbolo de moneda, ej: $, Bs, €")
+    mostrar_codigo = models.BooleanField(default=True, help_text="Mostrar código del animal en tablas (si False, muestra el nombre)")
+    animales_por_pag = models.IntegerField(default=25, choices=ANIMALES_PAG_CHOICES, help_text="Filas por página en tablas de animales")
+    tema_preferido = models.CharField(max_length=6, choices=TEMA_CHOICES, default='CLARO')
+
+    # Notificaciones del dashboard
+    notif_vencimientos = models.BooleanField(default=True, help_text="Alertas de suscripción próxima a vencer")
+    notif_vacunas = models.BooleanField(default=True, help_text="Recordatorios de vacunaciones pendientes")
+    notif_partos = models.BooleanField(default=True, help_text="Alertas de partos próximos (vacas preñadas)")
+
     def __str__(self):
         return f"Config de {self.user.nombre}"
+
 
 class VentaAnimal(models.Model):
     MOTIVO_CHOICES = [
@@ -296,6 +317,43 @@ class PrecioLecheConfig(models.Model):
     
     def __str__(self):
         return f"Precio Leche Finca {self.finca.nombre}: {self.precio_por_litro}"
+
+class RegistroOrdeno(models.Model):
+    TURNO_CHOICES = [
+        ('MAÑANA', 'Mañana'),
+        ('TARDE', 'Tarde'),
+        ('NOCHE', 'Noche'),
+        ('DIARIO', 'Diario / Consolidado'),
+    ]
+    finca = models.ForeignKey(Finca, on_delete=models.CASCADE, related_name='registros_ordeno')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+    rebaño = models.ForeignKey(Rebaño, on_delete=models.SET_NULL, null=True, blank=True, related_name='registros_ordeno')
+    animal = models.ForeignKey(Animal, on_delete=models.SET_NULL, null=True, blank=True, related_name='registros_ordeno_animal', help_text="Animal individual si el registro es por vaca")
+    fecha = models.DateField(default=timezone.now)
+    turno = models.CharField(max_length=20, choices=TURNO_CHOICES, default='MAÑANA')
+    vacas_ordenadas = models.IntegerField(default=1, help_text="Cantidad de vacas ordenadas en el turno/día")
+    litros_leche = models.DecimalField(max_digits=10, decimal_places=2, help_text="Litros totales de leche")
+    precio_litro = models.DecimalField(max_digits=8, decimal_places=2, default=0.00, help_text="Precio por litro al momento del registro")
+    temperatura_tanque = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True, help_text="Temperatura °C del tanque de enfriamiento")
+    observaciones = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha', '-created_at']
+
+    def __str__(self):
+        return f"Ordeño {self.fecha} [{self.get_turno_display()}] - {self.litros_leche}L ({self.finca.nombre})"
+
+    @property
+    def promedio_por_vaca(self):
+        if self.vacas_ordenadas and self.vacas_ordenadas > 0:
+            return round(float(self.litros_leche) / float(self.vacas_ordenadas), 2)
+        return 0.0
+
+    @property
+    def ingreso_estimado(self):
+        return round(float(self.litros_leche) * float(self.precio_litro), 2)
+
 
 class LogActividad(models.Model):
     ACCION_CHOICES = [

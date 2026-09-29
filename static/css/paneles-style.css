@@ -19,6 +19,9 @@ body {
     overflow-x: hidden; 
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--bg-main);
+    font-size: 1.125rem; /* 18px base para accesibilidad */
+    line-height: 1.6;
+    color: #212529; /* Alto contraste */
 }
 
 /* Sidebar Styles */
@@ -130,8 +133,8 @@ body {
 }
 
 .card h5 {
-    color: #555;
-    font-size: 1rem;
+    color: #212529;
+    font-size: 1.125rem;
     font-weight: 600;
 }
 
@@ -157,7 +160,7 @@ body {
 .table tbody td {
     padding: 15px;
     vertical-align: middle;
-    color: #444;
+    color: #212529;
 }
 
 .badge {
@@ -319,4 +322,28 @@ body {
 /* Global PWA Touch Optimization */
 * {
     -webkit-tap-highlight-color: transparent;
+}
+
+/* ==============================================================
+   ACCESIBILIDAD Y UX/UI - (Adaptaciones Adultos Mayores)
+   ============================================================== */
+/* Botones amplios y táctiles */
+.btn {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 0.5rem 1.25rem;
+    font-size: 1.125rem;
+}
+
+/* Contornos claros para navegación por teclado / puntero */
+.btn:focus-visible, .nav-link:focus-visible, .form-control:focus-visible, .form-select:focus-visible {
+    outline: 3px solid var(--primary-color) !important;
+    outline-offset: 2px;
+}
+
+/* Inputs de formularios legibles y accesibles */
+.form-control, .form-select {
+    min-height: 48px;
+    font-size: 1.125rem;
+    padding: 0.5rem 1rem;
 }

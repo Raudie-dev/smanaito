@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+{% block title %}Control de Ordeño - Samanito{% endblock %}
+{% block section_title %}Control de Ordeño{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 mt-2 gap-3">
+        <div>
+            <h4 class="fw-bold mb-1 text-dark"><i class="bi bi-bucket-fill text-success me-2"></i>Control de Ordeño y Producción Láctea</h4>
+            <p class="text-muted small mb-0">Monitoreo diario de producción de leche por rebaño o animal individual en {{ finca_activa.nombre }}.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalPrecioLeche">
+                <i class="bi bi-gear-fill me-1"></i> Precio Leche: ${{ precio_config.precio_por_litro }}
+            </button>
+            <button class="btn btn-success btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoOrdeno">
+                <i class="bi bi-plus-circle me-1"></i> Registrar Ordeño
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-info-circle me-2"></i>{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 p-3" style="background: linear-gradient(135deg, #198754, #20c997); color: white;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small fw-semibold text-white-50">PRODUCCIÓN HOY</span>
+                    <i class="bi bi-droplet-fill fs-4 text-white-50"></i>
+                </div>
+                <h3 class="fw-bold mb-1">{{ litros_hoy|floatformat:1 }} <small class="fs-6">L</small></h3>
+                <small class="text-white-50"><i class="bi bi-calendar-check me-1"></i>{{ vacas_hoy }} vacas ordeñadas hoy</small>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small fw-semibold text-muted text-uppercase">PROMEDIO / VACA</span>
+                    <i class="bi bi-speedometer2 fs-4 text-success"></i>
+                </div>
+                <h3 class="fw-bold mb-1 text-dark">{{ promedio_hoy|floatformat:2 }} <small class="fs-6 text-muted">L/vaca</small></h3>
+                <small class="text-muted"><i class="bi bi-bar-chart me-1"></i>Eficiencia diaria</small>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small fw-semibold text-muted text-uppercase">PRODUCCIÓN MES</span>
+                    <i class="bi bi-calendar3 fs-4 text-primary"></i>
+                </div>
+                <h3 class="fw-bold mb-1 text-primary">{{ litros_mes|floatformat:0 }} <small class="fs-6 text-muted">L</small></h3>
+                <small class="text-muted"><i class="bi bi-graph-up me-1"></i>Acumulado mes en curso</small>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 p-3 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="small fw-semibold text-muted text-uppercase">INGRESO EST. MES</span>
+                    <i class="bi bi-cash-stack fs-4 text-warning"></i>
+                </div>
+                <h3 class="fw-bold mb-1 text-dark">${{ ingreso_mes|floatformat:2 }}</h3>
+                <small class="text-muted"><i class="bi bi-tag me-1"></i>A ${{ precio_config.precio_por_litro }}/L</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart & Summary Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Tendencia de Producción Láctea (Últimos 14 días)</h6>
+                    <span class="badge bg-success-subtle text-success">Litros / Día</span>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartOrdeno" style="max-height: 280px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-info-square me-2 text-primary"></i>Resumen de Ordeño</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Precio Base Registrado</span>
+                        <span class="fw-bold">${{ precio_config.precio_por_litro }} / L</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Rebaños de Ordeño</span>
+                        <span class="fw-bold">{{ rebaños.count }} rebaños</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Vacas Hembras</span>
+                        <span class="fw-bold">{{ animales.count }} vacas</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-muted">Total Registros</span>
+                        <span class="fw-bold">{{ registros.count }} registros</span>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-light rounded text-center">
+                        <small class="text-muted d-block mb-2">¿Quieres registrar un tanque de leche completo o por rebaño?</small>
+                        <button class="btn btn-sm btn-success w-100" data-bs-toggle="modal" data-bs-target="#modalNuevoOrdeno">
+                            <i class="bi bi-plus-lg me-1"></i> Nuevo Registro Rápido
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table of Milking Records -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-3 pb-2 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <h6 class="fw-bold mb-0"><i class="bi bi-list-task me-2 text-dark"></i>Historial de Registros de Ordeño</h6>
+            <div class="input-group input-group-sm" style="max-width: 250px;">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="filterInput" class="form-select border-start-0" placeholder="Buscar en historial...">
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tablaOrdeno">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Turno</th>
+                            <th>Rebaño / Animal</th>
+                            <th class="text-center">Vacas</th>
+                            <th class="text-end">Litros</th>
+                            <th class="text-end">Promedio L/Vaca</th>
+                            <th class="text-center">Temp. Tanque</th>
+                            <th class="text-end">Ingreso Est.</th>
+                            <th>Observaciones</th>
+                            <th class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in registros %}
+                        <tr>
+                            <td class="fw-semibold">{{ r.fecha|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if r.turno == 'MAÑANA' %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-sun me-1"></i>Mañana</span>
+                                {% elif r.turno == 'TARDE' %}
+                                    <span class="badge bg-info text-dark"><i class="bi bi-sunset me-1"></i>Tarde</span>
+                                {% elif r.turno == 'NOCHE' %}
+                                    <span class="badge bg-dark"><i class="bi bi-moon-stars me-1"></i>Noche</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Diario</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.animal %}
+                                    <span class="badge bg-light text-dark border"><i class="bi bi-tag me-1"></i>{{ r.animal.codigo }} ({{ r.animal.nombre|default:"Sin nombre" }})</span>
+                                {% elif r.rebaño %}
+                                    <span class="badge bg-light text-dark border"><i class="bi bi-grid-3x3-gap me-1"></i>{{ r.rebaño.nombre }}</span>
+                                {% else %}
+                                    <span class="text-muted small">Toda la Finca</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">{{ r.vacas_ordenadas }}</td>
+                            <td class="text-end fw-bold text-success">{{ r.litros_leche|floatformat:1 }} L</td>
+                            <td class="text-end">{{ r.promedio_por_vaca|floatformat:2 }} L</td>
+                            <td class="text-center">
+                                {% if r.temperatura_tanque %}
+                                    <span class="badge bg-info-subtle text-info border border-info">{{ r.temperatura_tanque }} °C</span>
+                                {% else %}
+                                    <span class="text-muted small">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-dark fw-semibold">${{ r.ingreso_estimado|floatformat:2 }}</td>
+                            <td class="small text-muted text-truncate" style="max-width: 180px;">{{ r.observaciones|default:"-" }}</td>
+                            <td class="text-end">
+                                <form method="POST" onsubmit="return confirm('¿Desea eliminar este registro de ordeño?');" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="eliminar_ordeno">
+                                    <input type="hidden" name="registro_id" value="{{ r.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-4 text-muted">
+                                <i class="bi bi-bucket fs-2 d-block mb-2 text-muted"></i>
+                                No hay registros de ordeño cargados. Haz clic en <strong>Registrar Ordeño</strong> para agregar el primero.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuevo Ordeño -->
+<div class="modal fade" id="modalNuevoOrdeno" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-bucket-fill me-2"></i>Registrar Ordeño</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="guardar_ordeno">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Fecha</label>
+                            <input type="date" name="fecha" class="form-control form-control-sm" value="{% now 'Y-m-d' %}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Turno</label>
+                            <select name="turno" class="form-select form-select-sm" required>
+                                <option value="MAÑANA" selected>Mañana</option>
+                                <option value="TARDE">Tarde</option>
+                                <option value="NOCHE">Noche</option>
+                                <option value="DIARIO">Diario / Consolidado</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Rebaño (Opcional)</label>
+                            <select name="rebano_id" class="form-select form-select-sm">
+                                <option value="">Todos / Finca General</option>
+                                {% for reb in rebaños %}
+                                <option value="{{ reb.id }}">{{ reb.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Animal (Opcional)</label>
+                            <select name="animal_id" class="form-select form-select-sm">
+                                <option value="">Selección individual...</option>
+                                {% for a in animales %}
+                                <option value="{{ a.id }}">{{ a.codigo }} - {{ a.nombre|default:"Sin nombre" }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">N° Vacas Ordenadas</label>
+                            <input type="number" name="vacas_ordenadas" class="form-control form-control-sm" value="1" min="1" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Litros Totales (L)</label>
+                            <input type="number" step="0.1" name="litros_leche" class="form-control form-control-sm" placeholder="Ej: 150.5" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Precio / Litro ($)</label>
+                            <input type="number" step="0.01" name="precio_litro" class="form-control form-control-sm" value="{{ precio_config.precio_por_litro }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Temp. Tanque (°C)</label>
+                            <input type="number" step="0.1" name="temperatura_tanque" class="form-control form-control-sm" placeholder="Ej: 4.2">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Observaciones</label>
+                            <textarea name="observaciones" class="form-control form-control-sm" rows="2" placeholder="Notas sobre el estado de la leche, sanidad del ordeño, etc."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-circle me-1"></i>Guardar Ordeño</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Precio Leche -->
+<div class="modal fade" id="modalPrecioLeche" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h6 class="modal-title fw-bold"><i class="bi bi-cash-coin me-2"></i>Precio de Leche Base</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="actualizar_precio">
+                <div class="modal-body">
+                    <label class="form-label small fw-semibold">Precio por Litro ($)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">$</span>
+                        <input type="number" step="0.01" name="precio_por_litro" class="form-control" value="{{ precio_config.precio_por_litro }}" required>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Este valor se utilizará para calcular los ingresos estimados por ordeño y en liquidaciones.</small>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Chart initialization
+        const ctx = document.getElementById('chartOrdeno').getContext('2d');
+        const fechas = {{ fechas_chart_json|safe }};
+        const litros = {{ litros_chart_json|safe }};
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: fechas,
+                datasets: [{
+                    label: 'Litros de Leche',
+                    data: litros,
+                    borderColor: '#198754',
+                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#198754',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f0f0f0' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // Search/Filter table
+        const filterInput = document.getElementById('filterInput');
+        if (filterInput) {
+            filterInput.addEventListener('keyup', function() {
+                const val = this.value.toLowerCase();
+                const rows = document.querySelectorAll('#tablaOrdeno tbody tr');
+                rows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(val) ? '' : 'none';
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}
