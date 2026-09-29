@@ -29,7 +29,7 @@ if not SECRET_KEY:
     SECRET_KEY = 'django-insecure-dev-key-change-me'
 
 # Cambia a False para ver tus páginas 404/500 y habilitar seguridad
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
