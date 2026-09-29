@@ -278,7 +278,7 @@
                                         <i class="bi bi-pencil"></i>
                                     </button>
 
-                                    <form method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar este gasto recurrente?');">
+                                    <form method="POST" class="d-inline" data-confirm="¿Eliminar este gasto recurrente?">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="eliminar_gasto_recurrente">
                                         <input type="hidden" name="gasto_id" value="{{ g.id }}">

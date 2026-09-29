@@ -187,7 +187,7 @@
                             <td class="text-end text-dark fw-semibold">${{ r.ingreso_estimado|floatformat:2 }}</td>
                             <td class="small text-muted text-truncate" style="max-width: 180px;">{{ r.observaciones|default:"-" }}</td>
                             <td class="text-end">
-                                <form method="POST" onsubmit="return confirm('¿Desea eliminar este registro de ordeño?');" class="d-inline">
+                                <form method="POST" data-confirm="¿Desea eliminar este registro de ordeño?" class="d-inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="eliminar_ordeno">
                                     <input type="hidden" name="registro_id" value="{{ r.id }}">

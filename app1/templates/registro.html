@@ -87,22 +87,22 @@
                     </td>
                     <td>
                         {% if animal.sexo == 'M' %}
-                            <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-gender-male"></i> Macho</span>
+                            <span class="badge bg-primary text-white px-3 py-1"><i class="bi bi-gender-male"></i> Macho</span>
                         {% else %}
-                            <span class="badge bg-danger bg-opacity-10 text-danger"><i class="bi bi-gender-female"></i> Hembra</span>
+                            <span class="badge bg-danger text-white px-3 py-1"><i class="bi bi-gender-female"></i> Hembra</span>
                         {% endif %}
                     </td>
                     <td>
                         {% if animal.sexo == 'H' %}
                             {% if animal.estado_gestacion != 'N_A' %}
-                                <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle">{{ animal.get_estado_gestacion_display }}</span>
+                                <span class="badge bg-info text-dark border border-info px-3 py-1">{{ animal.get_estado_gestacion_display }}</span>
                             {% endif %}
                             {% if animal.estado_produccion != 'N_A' %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle">{{ animal.get_estado_produccion_display }}</span>
+                                <span class="badge bg-success text-white px-3 py-1">{{ animal.get_estado_produccion_display }}</span>
                             {% endif %}
                         {% else %}
                             {% if animal.uso_macho != 'N_A' %}
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle">{{ animal.get_uso_macho_display }}</span>
+                                <span class="badge bg-secondary text-white px-3 py-1">{{ animal.get_uso_macho_display }}</span>
                             {% endif %}
                         {% endif %}
                     </td>
@@ -130,6 +130,34 @@
                 {% endfor %}
             </tbody>
         </table>
+        
+        {% if animales.has_other_pages %}
+        <nav aria-label="Navegación de páginas" class="mt-4 mb-2">
+            <ul class="pagination justify-content-center">
+                {% if animales.has_previous %}
+                <li class="page-item">
+                    <a class="page-link text-success" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.sexo %}&sexo={{ request.GET.sexo }}{% endif %}{% if request.GET.rebano %}&rebano={{ request.GET.rebano }}{% endif %}">&laquo; Primera</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link text-success" href="?page={{ animales.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.sexo %}&sexo={{ request.GET.sexo }}{% endif %}{% if request.GET.rebano %}&rebano={{ request.GET.rebano }}{% endif %}">Anterior</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link bg-success border-success text-white">Página {{ animales.number }} de {{ animales.paginator.num_pages }}</span>
+                </li>
+                
+                {% if animales.has_next %}
+                <li class="page-item">
+                    <a class="page-link text-success" href="?page={{ animales.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.sexo %}&sexo={{ request.GET.sexo }}{% endif %}{% if request.GET.rebano %}&rebano={{ request.GET.rebano }}{% endif %}">Siguiente</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link text-success" href="?page={{ animales.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.sexo %}&sexo={{ request.GET.sexo }}{% endif %}{% if request.GET.rebano %}&rebano={{ request.GET.rebano }}{% endif %}">Última &raquo;</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     </div>
 </div>
 

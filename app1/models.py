@@ -221,8 +221,9 @@ class PlanVacunacion(models.Model):
 
 class IncidenteSanitario(models.Model):
     ESTADO_INCIDENTE_CHOICES = [
-        ('ACTIVO', 'Activo / En Tratamiento'),
-        ('RESUELTO', 'Resuelto / Curado'),
+        ('ATENDIENDO', 'En Atendiendo'),
+        ('RECUPERACION', 'En Recuperación'),
+        ('RECUPERADO', 'Recuperado / Resuelto'),
     ]
     TIPO_INCIDENTE_CHOICES = [
         ('ENFERMEDAD', 'Enfermedad'),
@@ -240,7 +241,7 @@ class IncidenteSanitario(models.Model):
     tratamiento = models.TextField(blank=True, null=True)
     articulo_inventario = models.ForeignKey('ArticuloInventario', on_delete=models.SET_NULL, null=True, blank=True, related_name='incidentes_sanitarios')
     cantidad_utilizada = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Cantidad de medicamento usada")
-    estado = models.CharField(max_length=20, choices=ESTADO_INCIDENTE_CHOICES, default='ACTIVO')
+    estado = models.CharField(max_length=20, choices=ESTADO_INCIDENTE_CHOICES, default='ATENDIENDO')
     
     def __str__(self):
         return f"{self.animal.codigo} - {self.diagnostico}"

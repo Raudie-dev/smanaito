@@ -151,7 +151,7 @@
                                     </button>
                                 </form>
                                 {% endif %}
-                                <form method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta liquidación de leche?');">
+                                <form method="POST" class="d-inline" data-confirm="¿Eliminar esta liquidación de leche?">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="eliminar_liquidacion">
                                     <input type="hidden" name="liquidacion_id" value="{{ liq.id }}">
@@ -258,7 +258,7 @@
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="eliminar_gasto">
                                     <input type="hidden" name="gasto_id" value="{{ g.id }}">
-                                    <button type="submit" class="btn btn-sm btn-light text-danger" onclick="return confirm('¿Eliminar este gasto?');">
+                                    <button type="submit" class="btn btn-sm btn-light text-danger" data-confirm="¿Eliminar este gasto?">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>

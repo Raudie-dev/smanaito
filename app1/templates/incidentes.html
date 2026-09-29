@@ -22,87 +22,95 @@
         {% endfor %}
     {% endif %}
 
-    <div class="row">
-        <!-- Casos Activos -->
-        <div class="col-12 mb-4">
-            <div class="card shadow-sm border-0 border-top border-danger border-3">
-                <div class="card-header bg-white py-3">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-heart-pulse-fill text-danger me-2"></i>Casos Activos (En Tratamiento)</h6>
+    <div class="row g-4 kanban-board">
+        <!-- Atendiendo -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100 bg-light rounded-4 overflow-hidden">
+                <div class="card-header bg-danger text-white py-3 border-0">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-heart-pulse me-2"></i>En Atendiendo (<span id="count-atendiendo">{{ atendiendo|length }}</span>)</h6>
                 </div>
-                <div class="card-body bg-light">
-                    <div class="row">
-                        {% for inc in activos %}
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card border-0 shadow-sm h-100">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h6 class="fw-bold text-dark mb-0">{{ inc.animal.codigo }} - {{ inc.animal.nombre }}</h6>
-                                        <span class="badge bg-danger">Activo</span>
-                                    </div>
-                                    <div class="small text-muted mb-1"><i class="bi bi-calendar me-1"></i>{{ inc.fecha_incidente|date:"d M Y" }}</div>
-                                    <div class="small fw-bold text-primary mb-1">{{ inc.get_tipo_display }}</div>
-                                    <p class="small text-dark mb-2 mt-2 border-start border-danger border-2 ps-2"><strong>Dx:</strong> {{ inc.diagnostico }}</p>
-                                    {% if inc.tratamiento %}
-                                    <p class="small text-muted mb-3 fst-italic"><strong>Tratamiento:</strong> {{ inc.tratamiento }}</p>
-                                    {% endif %}
-                                    
-                                    <form method="POST" class="mt-3">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="action" value="resolver_incidente">
-                                        <input type="hidden" name="incidente_id" value="{{ inc.id }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-success w-100" onclick="return confirm('¿El animal ya está sano?');">
-                                            <i class="bi bi-check-all me-1"></i> Dar de Alta (Resuelto)
-                                        </button>
-                                    </form>
-                                </div>
+                <div class="card-body p-2" id="list-ATENDIENDO" data-status="ATENDIENDO" style="min-height: 100px;">
+                    {% for inc in atendiendo %}
+                    <div class="card shadow-sm border-0 mb-3 kanban-card cursor-grab" data-id="{{ inc.id }}"
+                         data-animal="{{ inc.animal.codigo }} - {{ inc.animal.nombre }}"
+                         data-fecha="{{ inc.fecha_incidente|date:'d M Y' }}"
+                         data-tipo="{{ inc.get_tipo_display }}"
+                         data-diagnostico="{{ inc.diagnostico }}"
+                         data-medicamento="{% if inc.articulo_inventario %}{{ inc.articulo_inventario.nombre }} ({{ inc.cantidad_utilizada|floatformat:2|default:'0' }} {{ inc.articulo_inventario.unidad_medida }}){% else %}Ninguno{% endif %}"
+                         data-tratamiento="{{ inc.tratamiento|default:'' }}"
+                         data-estado="{{ inc.estado }}"
+                         onclick="abrirModalIncidente(this)">
+                        <div class="card-body p-3 border-start border-danger border-4 rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold fs-6">{{ inc.animal.codigo }}</span>
+                                <span class="badge bg-light text-dark small"><i class="bi bi-calendar me-1"></i>{{ inc.fecha_incidente|date:"d M y" }}</span>
                             </div>
+                            <p class="mb-1 text-dark small fw-bold mt-2"><i class="bi bi-journal-medical text-danger me-1"></i>{{ inc.diagnostico }}</p>
+                            {% if inc.tratamiento %}<p class="small text-muted mb-0 text-truncate fst-italic">{{ inc.tratamiento }}</p>{% endif %}
                         </div>
-                        {% empty %}
-                        <div class="col-12 text-center text-muted py-4">
-                            <i class="bi bi-emoji-smile fs-1 text-light mb-2 d-block"></i>
-                            <p class="small">Ningún animal enfermo registrado actualmente.</p>
-                        </div>
-                        {% endfor %}
                     </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
         
-        <!-- Historial -->
-        <div class="col-12 mb-4">
-            <div class="card shadow-sm border-0 border-top border-secondary border-3">
-                <div class="card-header bg-white py-3">
-                    <h6 class="mb-0 fw-bold"><i class="bi bi-journal-medical text-secondary me-2"></i>Historial Clínico Reciente</h6>
+        <!-- Recuperación -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100 bg-light rounded-4 overflow-hidden">
+                <div class="card-header bg-warning text-dark py-3 border-0">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-bandaid me-2"></i>En Recuperación (<span id="count-recuperacion">{{ recuperacion|length }}</span>)</h6>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light text-muted small text-uppercase">
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Animal</th>
-                                    <th>Tipo</th>
-                                    <th>Diagnóstico</th>
-                                    <th>Tratamiento</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for inc in resueltos %}
-                                <tr>
-                                    <td class="small">{{ inc.fecha_incidente|date:"d/m/Y" }}</td>
-                                    <td class="fw-bold">{{ inc.animal.codigo }}</td>
-                                    <td class="small">{{ inc.get_tipo_display }}</td>
-                                    <td class="small">{{ inc.diagnostico }}</td>
-                                    <td class="small text-muted">{{ inc.tratamiento|truncatechars:30 }}</td>
-                                    <td><span class="badge bg-success">Resuelto</span></td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="6" class="text-center text-muted py-3">No hay historial clínico.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                <div class="card-body p-2" id="list-RECUPERACION" data-status="RECUPERACION" style="min-height: 100px;">
+                    {% for inc in recuperacion %}
+                    <div class="card shadow-sm border-0 mb-3 kanban-card cursor-grab" data-id="{{ inc.id }}"
+                         data-animal="{{ inc.animal.codigo }} - {{ inc.animal.nombre }}"
+                         data-fecha="{{ inc.fecha_incidente|date:'d M Y' }}"
+                         data-tipo="{{ inc.get_tipo_display }}"
+                         data-diagnostico="{{ inc.diagnostico }}"
+                         data-medicamento="{% if inc.articulo_inventario %}{{ inc.articulo_inventario.nombre }} ({{ inc.cantidad_utilizada|floatformat:2|default:'0' }} {{ inc.articulo_inventario.unidad_medida }}){% else %}Ninguno{% endif %}"
+                         data-tratamiento="{{ inc.tratamiento|default:'' }}"
+                         data-estado="{{ inc.estado }}"
+                         onclick="abrirModalIncidente(this)">
+                        <div class="card-body p-3 border-start border-warning border-4 rounded">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold fs-6">{{ inc.animal.codigo }}</span>
+                                <span class="badge bg-light text-dark small"><i class="bi bi-calendar me-1"></i>{{ inc.fecha_incidente|date:"d M y" }}</span>
+                            </div>
+                            <p class="mb-1 text-dark small fw-bold mt-2"><i class="bi bi-journal-medical text-warning me-1"></i>{{ inc.diagnostico }}</p>
+                            {% if inc.tratamiento %}<p class="small text-muted mb-0 text-truncate fst-italic">{{ inc.tratamiento }}</p>{% endif %}
+                        </div>
                     </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recuperado -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100 bg-light rounded-4 overflow-hidden">
+                <div class="card-header bg-success text-white py-3 border-0">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-check-circle me-2"></i>Recuperado (<span id="count-recuperado">{{ recuperado|length }}</span>)</h6>
+                </div>
+                <div class="card-body p-2" id="list-RECUPERADO" data-status="RECUPERADO" style="min-height: 100px;">
+                    {% for inc in recuperado %}
+                    <div class="card shadow-sm border-0 mb-3 kanban-card cursor-grab" data-id="{{ inc.id }}"
+                         data-animal="{{ inc.animal.codigo }} - {{ inc.animal.nombre }}"
+                         data-fecha="{{ inc.fecha_incidente|date:'d M Y' }}"
+                         data-tipo="{{ inc.get_tipo_display }}"
+                         data-diagnostico="{{ inc.diagnostico }}"
+                         data-medicamento="{% if inc.articulo_inventario %}{{ inc.articulo_inventario.nombre }} ({{ inc.cantidad_utilizada|floatformat:2|default:'0' }} {{ inc.articulo_inventario.unidad_medida }}){% else %}Ninguno{% endif %}"
+                         data-tratamiento="{{ inc.tratamiento|default:'' }}"
+                         data-estado="{{ inc.estado }}"
+                         onclick="abrirModalIncidente(this)">
+                        <div class="card-body p-3 border-start border-success border-4 rounded opacity-75 hover-opacity-100 transition-all">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold fs-6 text-decoration-line-through">{{ inc.animal.codigo }}</span>
+                                <span class="badge bg-light text-dark small"><i class="bi bi-calendar-check me-1"></i>{{ inc.fecha_incidente|date:"d M y" }}</span>
+                            </div>
+                            <p class="mb-1 text-dark small fw-bold mt-2">{{ inc.diagnostico }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -177,4 +185,137 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="modalDetalleIncidente" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg overflow-hidden" style="border-radius: 1.5rem;">
+            <div class="modal-header bg-light border-0 py-3">
+                <h5 class="modal-title fw-bold text-dark" id="mdi-titulo">Detalle del Incidente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="fs-6 text-muted"><i class="bi bi-calendar me-2"></i><span id="mdi-fecha"></span></span>
+                    <span class="badge bg-secondary rounded-pill fw-normal" id="mdi-tipo"></span>
+                </div>
+                
+                <h5 class="mb-3 fw-bold text-danger"><i class="bi bi-journal-medical me-2"></i><span id="mdi-diagnostico"></span></h5>
+                
+                <div class="bg-light p-3 rounded-4 mt-3 mb-4 border-start border-secondary border-3 shadow-sm">
+                    <p class="mb-2 pb-2 border-bottom border-secondary border-opacity-25">
+                        <span class="small text-muted fw-bold d-block mb-1">Medicamento Utilizado:</span>
+                        <span id="mdi-medicamento" class="text-dark"><i class="bi bi-capsule me-1 text-primary"></i> </span>
+                    </p>
+                    <p class="mb-0">
+                        <span class="small text-muted fw-bold d-block mb-1">Tratamiento Asignado / Receta:</span>
+                        <span id="mdi-tratamiento" class="fst-italic text-dark"></span>
+                    </p>
+                </div>
+                
+                <h6 class="fw-bold mb-3 text-center text-muted small text-uppercase mt-4">Cambiar Estado (Mover)</h6>
+                <form method="POST" id="formMoverIncidente">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="actualizar_estado_incidente">
+                    <input type="hidden" name="incidente_id" id="mdi-id">
+                    
+                    <div class="d-flex flex-column flex-md-row gap-2 justify-content-center">
+                        <button type="submit" name="nuevo_estado" value="ATENDIENDO" class="btn btn-outline-danger flex-fill fw-bold" id="btn-mover-atendiendo">Atendiendo</button>
+                        <button type="submit" name="nuevo_estado" value="RECUPERACION" class="btn btn-outline-warning text-dark flex-fill fw-bold" id="btn-mover-recuperacion">Recuperación</button>
+                        <button type="submit" name="nuevo_estado" value="RECUPERADO" class="btn btn-outline-success flex-fill fw-bold" id="btn-mover-recuperado">Recuperado</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const columns = ['ATENDIENDO', 'RECUPERACION', 'RECUPERADO'];
+        const borderClasses = {
+            'ATENDIENDO': 'border-danger',
+            'RECUPERACION': 'border-warning',
+            'RECUPERADO': 'border-success'
+        };
+        
+        columns.forEach(col => {
+            new Sortable(document.getElementById('list-' + col), {
+                group: 'kanban',
+                animation: 150,
+                ghostClass: 'opacity-50',
+                onEnd: function (evt) {
+                    const itemEl = evt.item;
+                    const fromList = evt.from;
+                    const toList = evt.to;
+                    
+                    if (fromList !== toList) {
+                        const newStatus = toList.dataset.status;
+                        const oldStatus = fromList.dataset.status;
+                        const incidenteId = itemEl.dataset.id;
+                        
+                        // Actualizar color de borde visualmente
+                        let cardBody = itemEl.querySelector('.card-body');
+                        cardBody.classList.remove(borderClasses[oldStatus]);
+                        cardBody.classList.add(borderClasses[newStatus]);
+                        
+                        // Actualizar contadores
+                        document.getElementById('count-' + oldStatus.toLowerCase()).innerText = fromList.children.length;
+                        document.getElementById('count-' + newStatus.toLowerCase()).innerText = toList.children.length;
+                        
+                        // Enviar solicitud AJAX
+                        const formData = new FormData();
+                        formData.append('action', 'actualizar_estado_incidente');
+                        formData.append('incidente_id', incidenteId);
+                        formData.append('nuevo_estado', newStatus);
+                        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                        
+                        fetch(window.location.href, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: formData
+                        }).then(response => response.json())
+                        .then(data => {
+                            if (!data.success) {
+                                alert('Error al guardar estado: ' + data.error);
+                            }
+                        }).catch(err => {
+                            console.error(err);
+                            alert('Error de red al intentar actualizar el estado.');
+                        });
+                    }
+                }
+            });
+        });
+    });
+</script>
+<script>
+    function abrirModalIncidente(card) {
+        document.getElementById('mdi-titulo').innerText = 'Animal: ' + card.dataset.animal;
+        document.getElementById('mdi-fecha').innerText = card.dataset.fecha;
+        document.getElementById('mdi-tipo').innerText = card.dataset.tipo;
+        document.getElementById('mdi-diagnostico').innerText = card.dataset.diagnostico;
+        
+        let medElem = document.getElementById('mdi-medicamento');
+        medElem.innerHTML = '<i class="bi bi-capsule me-1 text-primary"></i> ' + card.dataset.medicamento;
+        
+        document.getElementById('mdi-tratamiento').innerText = card.dataset.tratamiento || 'Sin tratamiento registrado';
+        document.getElementById('mdi-id').value = card.dataset.id;
+        
+        let estado = card.dataset.estado;
+        document.getElementById('btn-mover-atendiendo').style.display = (estado === 'ATENDIENDO') ? 'none' : 'block';
+        document.getElementById('btn-mover-recuperacion').style.display = (estado === 'RECUPERACION') ? 'none' : 'block';
+        document.getElementById('btn-mover-recuperado').style.display = (estado === 'RECUPERADO') ? 'none' : 'block';
+        
+        new bootstrap.Modal(document.getElementById('modalDetalleIncidente')).show();
+    }
+</script>
+<style>
+    .cursor-grab { cursor: grab; }
+    .cursor-grab:active { cursor: grabbing; }
+</style>
 {% endblock %}

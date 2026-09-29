@@ -8,6 +8,8 @@ import json
 import secrets
 from .models import User, Finca, Animal, Rebaño, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, GastoRecurrente, LiquidacionLeche, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento, ProtocoloAlimentacion, LecturaComedero, OrdenCargaMixer, ServicioReproductivo, DiagnosticoGestacion, RegistroParto, Potrero, RotacionPotrero, ArticuloInventario, MovimientoInventario, CatalogoSemen, Empleado, PagoNomina, WebAuthnCredential, RegistroOrdeno
 
+from django.core.paginator import Paginator
+
 def registrar_log(usuario, finca_id, accion, modulo, descripcion):
     try:
         LogActividad.objects.create(
@@ -435,8 +437,12 @@ def registro(request):
         
     propietarios_unicos = Animal.objects.filter(finca_id=finca_activa_id).exclude(propietario__isnull=True).exclude(propietario='').values_list('propietario', flat=True).distinct()
         
+    paginator = Paginator(animales, 15)
+    page_number = request.GET.get('page')
+    animales_paginados = paginator.get_page(page_number)
+        
     context = {
-        'animales': animales,
+        'animales': animales_paginados,
         'rebanos': Rebaño.objects.filter(finca_id=finca_activa_id),
         'q': q,
         'filtro_sexo': filtro_sexo,
@@ -941,28 +947,39 @@ def incidentes(request):
             except Exception as e:
                 messages.error(request, f"Error: {str(e)}")
                 
-        elif action == 'resolver_incidente':
+        elif action == 'actualizar_estado_incidente':
             incidente_id = request.POST.get('incidente_id')
+            nuevo_estado = request.POST.get('nuevo_estado')
             try:
                 inc = IncidenteSanitario.objects.get(id=incidente_id, finca_id=finca_activa_id)
-                inc.estado = 'RESUELTO'
+                inc.estado = nuevo_estado
                 inc.save()
-                registrar_log(user, finca_activa_id, 'MODIFICACION', 'SANIDAD', f"Marcó como resuelto el incidente clínico del animal '{inc.animal.codigo}'")
-                messages.success(request, f"Incidente de {inc.animal.codigo} resuelto.")
+                registrar_log(user, finca_activa_id, 'MODIFICACION', 'SANIDAD', f"Actualizó estado del incidente '{inc.animal.codigo}' a {nuevo_estado}")
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    from django.http import JsonResponse
+                    return JsonResponse({'success': True})
+                messages.success(request, f"Estado del incidente de {inc.animal.codigo} actualizado.")
             except Exception as e:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    from django.http import JsonResponse
+                    return JsonResponse({'success': False, 'error': str(e)}, status=400)
                 messages.error(request, f"Error: {str(e)}")
                 
-        return redirect('incidentes')
+        if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+            return redirect('incidentes')
         
-    activos = IncidenteSanitario.objects.filter(finca_id=finca_activa_id, estado='ACTIVO').order_by('-fecha_incidente')
-    resueltos = IncidenteSanitario.objects.filter(finca_id=finca_activa_id, estado='RESUELTO').order_by('-fecha_incidente')[:50]
+    atendiendo = IncidenteSanitario.objects.filter(finca_id=finca_activa_id, estado='ATENDIENDO').order_by('-fecha_incidente')
+    recuperacion = IncidenteSanitario.objects.filter(finca_id=finca_activa_id, estado='RECUPERACION').order_by('-fecha_incidente')
+    recuperado = IncidenteSanitario.objects.filter(finca_id=finca_activa_id, estado='RECUPERADO').order_by('-fecha_incidente')[:50]
     animales_vivos = Animal.objects.filter(finca_id=finca_activa_id, estado_vida='VIVO')
     articulos_medicina = ArticuloInventario.objects.filter(finca_id=finca_activa_id, categoria='MEDICAMENTO')
     
     context = {
         'fincas_usuario': fincas_usuario,
-        'activos': activos,
-        'resueltos': resueltos,
+        'atendiendo': atendiendo,
+        'recuperacion': recuperacion,
+        'recuperado': recuperado,
         'animales_vivos': animales_vivos,
         'articulos_medicina': articulos_medicina,
     }

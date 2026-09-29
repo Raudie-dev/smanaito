@@ -298,7 +298,7 @@
                                         <td class="text-muted small">{{ cred.created_at|date:"d/m/Y H:i" }}</td>
                                         <td><span class="badge bg-light text-dark border">{{ cred.sign_count }} accesos</span></td>
                                         <td class="text-end">
-                                            <a href="{% url 'webauthn_delete' cred.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar esta huella?')">
+                                            <a href="{% url 'webauthn_delete' cred.id %}" class="btn btn-sm btn-outline-danger" data-confirm="¿Eliminar esta huella?">
                                                 <i class="bi bi-trash"></i>
                                             </a>
                                         </td>
@@ -355,7 +355,7 @@
                     </div>
                     <div class="card-body d-flex flex-column justify-content-between">
                         <p class="text-muted small mb-4">Sesión iniciada como <strong>{{ user_profile.nombre }}</strong>. Cierra sesión si estás en un dispositivo compartido.</p>
-                        <a href="{% url 'login' %}" class="btn btn-outline-danger" onclick="return confirm('¿Cerrar sesión?')">
+                        <a href="{% url 'login' %}" class="btn btn-outline-danger" data-confirm="¿Cerrar sesión?">
                             <i class="bi bi-box-arrow-right me-1"></i> Cerrar Sesión
                         </a>
                     </div>

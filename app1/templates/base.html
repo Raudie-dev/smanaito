@@ -489,5 +489,76 @@
         });
     </script>
     {% endif %}
+
+    <!-- Modal de Confirmación Global -->
+    <div class="modal fade" id="modalConfirmacionGlobal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="modalConfirmacionTitulo">Confirmar Acción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-dark fs-5" id="modalConfirmacionMensaje">
+                    ¿Estás seguro de que deseas realizar esta acción?
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary px-4" id="btnConfirmarAccion">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showConfirmModal(message, onConfirm, isDanger = false) {
+            document.getElementById('modalConfirmacionMensaje').textContent = message;
+            const btnConfirm = document.getElementById('btnConfirmarAccion');
+            btnConfirm.className = isDanger ? 'btn btn-danger px-4' : 'btn btn-primary px-4';
+            
+            const newBtn = btnConfirm.cloneNode(true);
+            btnConfirm.parentNode.replaceChild(newBtn, btnConfirm);
+            
+            newBtn.addEventListener('click', function() {
+                const myModalEl = document.getElementById('modalConfirmacionGlobal');
+                const modal = bootstrap.Modal.getInstance(myModalEl) || new bootstrap.Modal(myModalEl);
+                modal.hide();
+                // Esperar a que el modal se oculte para evitar glitches visuales antes de navegar/enviar
+                setTimeout(() => onConfirm(), 150);
+            });
+            
+            const myModal = new bootstrap.Modal(document.getElementById('modalConfirmacionGlobal'));
+            myModal.show();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Interceptar botones y enlaces con data-confirm
+            document.querySelectorAll('[data-confirm]').forEach(function(el) {
+                if (el.tagName.toLowerCase() === 'form') return;
+                el.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const message = this.getAttribute('data-confirm');
+                    const isDanger = this.classList.contains('btn-danger') || this.classList.contains('text-danger') || this.classList.contains('btn-outline-danger');
+                    showConfirmModal(message, () => {
+                        if (el.tagName.toLowerCase() === 'a') {
+                            window.location.href = el.href;
+                        } else if (el.form) {
+                            el.form.submit();
+                        }
+                    }, isDanger);
+                });
+            });
+
+            // Interceptar formularios con data-confirm
+            document.querySelectorAll('form[data-confirm]').forEach(function(form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const message = this.getAttribute('data-confirm');
+                    showConfirmModal(message, () => {
+                        form.submit();
+                    }, true); // Por lo general, los form submit de estas vistas son para eliminar
+                });
+            });
+        });
+    </script>
 </body>
 </html>
