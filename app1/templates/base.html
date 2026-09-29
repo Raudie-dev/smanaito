@@ -234,36 +234,32 @@
         <!-- Sidebar Overlay -->
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-        <nav class="navbar navbar-expand-lg navbar-dark px-4" style="background-color: var(--sidebar-bg);">
-            <div class="container-fluid">
+        <nav class="navbar navbar-expand navbar-dark px-3 py-2" style="background-color: var(--sidebar-bg);">
+            <div class="container-fluid flex-nowrap align-items-center px-0">
                 <!-- Hamburger Menu -->
-                <button class="btn d-flex align-items-center justify-content-center p-0 me-3 shadow-none" id="sidebarToggle" type="button" style="width: 36px; height: 36px; background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: background-color 0.2s;">
-                    <i class="bi bi-layout-sidebar text-white fs-5"></i>
+                <button class="btn d-flex align-items-center justify-content-center p-0 me-2 shadow-none flex-shrink-0" id="sidebarToggle" type="button" style="width: 35px; height: 35px; background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); transition: background-color 0.2s;">
+                    <i class="bi bi-layout-sidebar text-white fs-6"></i>
                 </button>
-                <span class="navbar-text fw-bold text-white d-none d-sm-block">
+                
+                <!-- Título en Desktop -->
+                <span class="navbar-text fw-bold text-white d-none d-md-block me-auto mb-0">
                     {% block section_title %}Sistema Ganadero{% endblock %}
                 </span>
-                <span class="navbar-text fw-bold text-white d-block d-sm-none fs-6">
-                    {% for f in fincas_usuario %}
-                        {% if f.id == request.session.finca_activa_id %}
-                            <i class="bi bi-pin-map-fill text-primary me-1"></i> {{ f.nombre }}
-                        {% endif %}
-                    {% endfor %}
-                    {% if not request.session.finca_activa_id %}Samanito{% endif %}
-                </span>
-                <div class="ms-auto d-flex align-items-center">
-                    <form action="{% url 'cambiar_finca' %}" method="POST" id="form-cambiar-finca" class="me-3 mb-0">
+                
+                <!-- Selector de finca y estado -->
+                <div class="d-flex align-items-center ms-auto flex-grow-1 justify-content-end" style="min-width: 0;">
+                    <form action="{% url 'cambiar_finca' %}" method="POST" id="form-cambiar-finca" class="me-2 mb-0 flex-grow-1 flex-md-grow-0" style="min-width: 0;">
                         {% csrf_token %}
-                        <div class="input-group input-group-sm shadow-sm">
-                            <span class="input-group-text bg-white border-0 text-primary"><i class="bi bi-pin-map-fill"></i></span>
-                            <select name="finca_id" class="form-select form-select-sm bg-white border-0 fw-bold text-dark" onchange="document.getElementById('form-cambiar-finca').submit()">
+                        <div class="input-group input-group-sm shadow-sm flex-nowrap">
+                            <span class="input-group-text bg-white border-0 text-primary px-2"><i class="bi bi-pin-map-fill"></i></span>
+                            <select name="finca_id" class="form-select form-select-sm bg-white border-0 fw-bold text-dark text-truncate" onchange="document.getElementById('form-cambiar-finca').submit()" style="min-width: 90px; cursor: pointer;">
                                 {% for f in fincas_usuario %}
-                                    <option value="{{ f.id }}" {% if request.session.finca_activa_id == f.id %}selected{% endif %}>Finca: {{ f.nombre }}</option>
+                                    <option value="{{ f.id }}" {% if request.session.finca_activa_id == f.id %}selected{% endif %}>{{ f.nombre }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                     </form>
-                    <span class="badge bg-success me-2 py-2 shadow-sm border border-light border-opacity-25">En línea</span>
+                    <span class="badge bg-success shadow-sm border border-light border-opacity-25 flex-shrink-0" style="padding: 0.4rem 0.5rem; font-size: 0.75rem;">En línea</span>
                 </div>
             </div>
         </nav>
