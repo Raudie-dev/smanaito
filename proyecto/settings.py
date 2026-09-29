@@ -29,7 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-fallback-key-solo-para-dev')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # En desarrollo acepta cualquier host; en producción acepta cualquier host
 ALLOWED_HOSTS = ["*"]
@@ -94,12 +94,15 @@ WSGI_APPLICATION = 'proyecto.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-# Lee DATABASE_URL del .env (soporta sqlite y postgres con dj-database-url)
 DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'raudajly_samanito',
+        'USER': 'raudajly_samanito',
+        'PASSWORD': 'KZo1=P]^Wlq?y*s5',
+        'HOST': 'localhost',
+        'PORT': '3306',
+    }
 }
 
 

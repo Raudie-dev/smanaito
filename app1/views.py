@@ -548,7 +548,7 @@ def rebano(request):
         'fincas_usuario': fincas_usuario,
         'mostrar_btn_estandares': mostrar_btn_estandares,
     }
-    return render(request, 'rebaño.html', context)
+    return render(request, 'rebano.html', context)
 
 
 

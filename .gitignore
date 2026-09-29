@@ -9,3 +9,4 @@ antigravity/
 
 # Variables de entorno – NUNCA subir al repo
 .env
+static/
