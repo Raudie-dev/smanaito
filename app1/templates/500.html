@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Error del Servidor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #2b0f0f, #432020, #642c2c);
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            overflow: hidden;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 4rem 3rem;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            max-width: 600px;
+            animation: fadeIn 1s ease-out;
+            position: relative;
+            z-index: 10;
+        }
+        h1 {
+            font-size: 8rem;
+            font-weight: 700;
+            background: -webkit-linear-gradient(#fff, #ffbaba);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0;
+            line-height: 1;
+            text-shadow: 0px 10px 20px rgba(0,0,0,0.2);
+        }
+        p {
+            font-size: 1.2rem;
+            font-weight: 300;
+            margin: 1.5rem 0 2.5rem;
+            opacity: 0.9;
+        }
+        .btn-custom {
+            background: linear-gradient(45deg, #ff416c, #ff4b2b);
+            border: none;
+            border-radius: 50px;
+            padding: 12px 35px;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(255, 75, 43, 0.3);
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 25px rgba(255, 75, 43, 0.5);
+            color: #fff;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .floating-element {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255,65,108,0.1) 0%, rgba(255,75,43,0) 70%);
+            border-radius: 50%;
+            top: -150px;
+            left: -150px;
+            animation: float 6s ease-in-out infinite;
+            z-index: 1;
+        }
+        .floating-element-2 {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(255,186,186,0.08) 0%, rgba(255,255,255,0) 70%);
+            border-radius: 50%;
+            bottom: -200px;
+            right: -150px;
+            animation: float 8s ease-in-out infinite reverse;
+            z-index: 1;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(30px) rotate(180deg); }
+            100% { transform: translateY(0px) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-element"></div>
+    <div class="floating-element-2"></div>
+    
+    <div class="glass-card">
+        <h1>500</h1>
+        <h3 class="mt-3 fw-bold">Error del Servidor</h3>
+        <p>Algo salió mal en nuestro lado. Estamos trabajando para solucionarlo lo antes posible. Intenta de nuevo más tarde.</p>
+        <a href="/" class="btn-custom">Volver al Inicio</a>
+    </div>
+</body>
+</html>
