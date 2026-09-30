@@ -252,7 +252,7 @@
                         {% csrf_token %}
                         <div class="input-group input-group-sm flex-nowrap" style="background-color: rgba(255, 255, 255, 0.15); border-radius: 8px;">
                             <span class="input-group-text bg-transparent border-0 text-white px-2"><i class="bi bi-pin-map-fill"></i></span>
-                            <select name="finca_id" class="form-select form-select-sm bg-transparent border-0 fw-bold text-white text-truncate shadow-none px-1" onchange="document.getElementById('form-cambiar-finca').submit()" style="min-width: 90px; cursor: pointer; background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 16 16\'><path fill=\'none\' stroke=\'%23ffffff\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'m2 5 6 6 6-6\'/></svg>'); background-size: 16px 12px;">
+                            <select name="finca_id" class="form-select form-select-sm bg-transparent border-0 fw-bold text-white text-truncate shadow-none ps-1 pe-4" onchange="document.getElementById('form-cambiar-finca').submit()" style="min-width: 100px; cursor: pointer; background-image: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 16 16\'><path fill=\'none\' stroke=\'%23ffffff\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'m2 5 6 6 6-6\'/></svg>'); background-size: 12px 12px;">
                                 {% for f in fincas_usuario %}
                                     <option value="{{ f.id }}" class="text-dark" {% if request.session.finca_activa_id == f.id %}selected{% endif %}>{{ f.nombre }}</option>
                                 {% endfor %}
