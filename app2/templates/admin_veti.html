@@ -1,0 +1,233 @@
+{% extends 'base_admin.html' %}
+{% block title %}Veti IA – Config | Master Admin{% endblock %}
+
+{% block admin_content %}
+<div>
+
+  <!-- Page Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+      <h5 class="fw-bold mb-1">
+        <i class="bi bi-stars text-warning me-2"></i>Configuración del Asistente Veti IA
+      </h5>
+      <p class="text-muted small mb-0">
+        Define el comportamiento global de Veti para todos los usuarios de la plataforma.
+      </p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      {% if config.activo %}
+        <span class="badge bg-success px-3 py-2 shadow-sm">
+          <i class="bi bi-circle-fill me-1" style="font-size:.6rem;"></i> Veti Activo
+        </span>
+      {% else %}
+        <span class="badge bg-danger px-3 py-2 shadow-sm">
+          <i class="bi bi-circle-fill me-1" style="font-size:.6rem;"></i> Veti Desactivado
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+      <i class="bi bi-info-circle me-2"></i>{{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="POST" action="{% url 'guardar_veti_config' %}">
+    {% csrf_token %}
+    <div class="row g-4">
+
+      <!-- ─── Columna izquierda: Prompt ─── -->
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:14px;">
+          <div class="card-header border-0 bg-white pt-4 px-4 pb-2" style="border-radius:14px 14px 0 0;">
+            <div class="d-flex align-items-center gap-2">
+              <div class="p-2 rounded-3 bg-warning bg-opacity-10">
+                <i class="bi bi-chat-left-quote-fill text-warning fs-5"></i>
+              </div>
+              <div>
+                <h6 class="fw-bold mb-0">Prompt del Sistema</h6>
+                <small class="text-muted">Instrucciones que recibe Veti antes de cada conversación</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body px-4 pb-4">
+            <textarea
+              name="system_prompt"
+              id="system_prompt"
+              class="form-control font-monospace"
+              rows="16"
+              style="font-size:0.82rem; line-height:1.6; resize:vertical; border-radius:10px; border-color:#e2e8f0;"
+              placeholder="Escribe aquí el prompt del sistema para Veti…"
+            >{{ config.system_prompt }}</textarea>
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>
+                El prompt se antepone a cada conversación como instrucción de sistema.
+              </small>
+              <span id="char-count" class="badge bg-light text-muted border" style="font-size:.72rem;"></span>
+            </div>
+
+            <!-- Plantillas rápidas -->
+            <div class="mt-3">
+              <small class="text-muted fw-semibold d-block mb-2">Plantillas rápidas:</small>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill"
+                  onclick="setPrompt('zootecnista')">
+                  <i class="bi bi-award me-1"></i>Zootecnista experto
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill"
+                  onclick="setPrompt('estricto')">
+                  <i class="bi bi-shield-check me-1"></i>Estricto solo ganadería
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill"
+                  onclick="setPrompt('educativo')">
+                  <i class="bi bi-book me-1"></i>Educativo / formativo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Columna derecha: Parámetros ─── -->
+      <div class="col-lg-4">
+
+        <!-- Estado -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+          <div class="card-body p-4">
+            <h6 class="fw-bold mb-3">
+              <i class="bi bi-toggle-on me-2 text-success"></i>Estado del Asistente
+            </h6>
+            <div class="form-check form-switch fs-5">
+              <input class="form-check-input" type="checkbox" name="activo" id="activo"
+                {% if config.activo %}checked{% endif %}
+                style="width:3em; height:1.5em; cursor:pointer;">
+              <label class="form-check-label ms-2 fw-semibold" for="activo" style="font-size:1rem;">
+                Veti habilitado
+              </label>
+            </div>
+            <small class="text-muted d-block mt-2">
+              Si está desactivado, los usuarios verán un mensaje indicando que el asistente no está disponible.
+            </small>
+          </div>
+        </div>
+
+        <!-- Modelo -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+          <div class="card-body p-4">
+            <h6 class="fw-bold mb-3">
+              <i class="bi bi-cpu me-2 text-primary"></i>Modelo DeepSeek
+            </h6>
+            <select name="modelo" class="form-select" style="border-radius:10px; border-color:#e2e8f0;">
+              <option value="deepseek-chat"     {% if config.modelo == 'deepseek-chat' %}selected{% endif %}>deepseek-chat (recomendado)</option>
+              <option value="deepseek-reasoner" {% if config.modelo == 'deepseek-reasoner' %}selected{% endif %}>deepseek-reasoner (razonamiento)</option>
+            </select>
+            <small class="text-muted d-block mt-2">
+              <i class="bi bi-lightbulb me-1"></i>
+              <strong>deepseek-chat</strong> es rápido y preciso. <strong>deepseek-reasoner</strong> razona paso a paso.
+            </small>
+          </div>
+        </div>
+
+        <!-- Temperatura -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+          <div class="card-body p-4">
+            <h6 class="fw-bold mb-1">
+              <i class="bi bi-thermometer-half me-2 text-warning"></i>Temperatura
+              <span id="temp-val" class="badge bg-warning text-dark ms-2">{{ config.temperatura }}</span>
+            </h6>
+            <small class="text-muted d-block mb-3">0 = respuestas precisas &middot; 2 = más creativo</small>
+            <input type="range" class="form-range" name="temperatura" id="temperatura"
+              min="0" max="2" step="0.05"
+              value="{{ config.temperatura }}"
+              oninput="document.getElementById('temp-val').textContent = parseFloat(this.value).toFixed(2)">
+            <div class="d-flex justify-content-between">
+              <small class="text-muted">Preciso (0.0)</small>
+              <small class="text-muted">Creativo (2.0)</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Max Tokens -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+          <div class="card-body p-4">
+            <h6 class="fw-bold mb-1">
+              <i class="bi bi-hash me-2 text-info"></i>Máx. Tokens
+            </h6>
+            <small class="text-muted d-block mb-3">Longitud máxima de cada respuesta (64 – 8192)</small>
+            <input type="number" class="form-control" name="max_tokens"
+              value="{{ config.max_tokens }}" min="64" max="8192" step="64"
+              style="border-radius:10px; border-color:#e2e8f0;">
+          </div>
+        </div>
+
+        <!-- Última actualización -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:14px; background:#f8fafc;">
+          <div class="card-body p-3">
+            <small class="text-muted">
+              <i class="bi bi-clock-history me-1"></i>
+              Última actualización: <strong>{{ config.updated_at|date:"d/m/Y H:i" }}</strong>
+            </small>
+          </div>
+        </div>
+
+        <!-- Guardar -->
+        <div class="d-grid">
+          <button type="submit" class="btn btn-success btn-lg shadow-sm" style="border-radius:12px;">
+            <i class="bi bi-floppy2-fill me-2"></i>Guardar Configuración
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </form>
+
+</div>
+
+<script>
+  const ta  = document.getElementById('system_prompt');
+  const cnt = document.getElementById('char-count');
+  function updateCount() { cnt.textContent = ta.value.length.toLocaleString('es') + ' caracteres'; }
+  ta.addEventListener('input', updateCount);
+  updateCount();
+
+  const PROMPTS = {
+    zootecnista: `Eres Veti, un veterinario zootecnista experto con más de 20 años de experiencia en gestión ganadera bovina, integrado en Samanito, un sistema profesional de administración de fincas. Tu perfil combina:
+
+🐄 VETERINARIA: Diagnóstico y tratamiento de enfermedades bovinas, protocolos de vacunación, manejo sanitario, bioseguridad, parasitología, farmacología veterinaria y primeros auxilios animales.
+
+🌾 ZOOTECNIA: Genética y mejoramiento bovino, selección de razas, índices productivos, eficiencia reproductiva, manejo de ciclos estrales, sincronización de celos, inseminación artificial y transferencia de embriones.
+
+📊 GESTIÓN GANADERA: Planificación de hatos, análisis de rentabilidad, estructura de costos de producción, indicadores de eficiencia lechera y de carne, manejo de pasturas y potreros, rotación y carga animal.
+
+💼 ADMINISTRACIÓN: Registros zootécnicos, trazabilidad animal, planillas de producción, análisis financiero de finca, presupuestos y proyecciones.
+
+INSTRUCCIONES DE COMPORTAMIENTO:
+- Responde SIEMPRE en español, con lenguaje técnico pero accesible.
+- Cuando un ganadero describe síntomas, primero identifica posibles diagnósticos diferenciales y luego recomienda acciones concretas.
+- Usa valores de referencia precisos: temperatura normal bovina 38–39.5°C, frecuencia cardíaca 60–80 lpm, gestación 280–285 días, etc.
+- Si detectas una emergencia sanitaria o animal, indícalo claramente con ⚠️ y prioriza la acción inmediata.
+- Proporciona protocolos paso a paso cuando el usuario lo solicite.
+- Incluye dosis, vías de administración y tiempos de retiro cuando hables de medicamentos.
+- Cuando analices rentabilidad, usa indicadores como costo por litro, conversión alimenticia, GDP (ganancia diaria de peso) y relación costo/beneficio.
+- Si el usuario pregunta algo fuera de ganadería, responde brevemente y redirige hacia tu especialidad.
+- Cita buenas prácticas ganaderas (BPG) y normativas cuando sea relevante.`,
+
+    estricto: `Eres Veti, un asistente especializado exclusivamente en ganadería bovina dentro de Samanito. SOLO debes responder preguntas relacionadas con: manejo de ganado, sanidad animal, reproducción bovina, nutrición, pastoreo, finanzas de finca ganadera, ordeño y engorde. Si el usuario pregunta sobre temas ajenos a la ganadería, debes declinar educadamente e indicar que solo puedes ayudar en temas ganaderos. Responde siempre en español con claridad y precisión técnica.`,
+
+    educativo: `Eres Veti, un asistente educativo sobre ganadería bovina en la plataforma Samanito. Tu objetivo es no solo responder, sino también enseñar y explicar el por qué de cada práctica ganadera. Usa ejemplos concretos, explica conceptos técnicos de forma sencilla y proporciona recomendaciones prácticas. Cuando sea relevante, incluye datos numéricos, rangos normales y mejores prácticas del sector. Responde siempre en español con un tono amable, pedagógico y profesional.`
+  };
+
+  function setPrompt(tipo) {
+    if (confirm('¿Reemplazar el prompt actual con la plantilla "' + tipo + '"?')) {
+      ta.value = PROMPTS[tipo];
+      updateCount();
+    }
+  }
+</script>
+{% endblock %}

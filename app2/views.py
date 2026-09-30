@@ -395,3 +395,45 @@ def registrar_pago_saas(request):
 
     return redirect(request.META.get('HTTP_REFERER', 'admin_finanzas'))
 
+
+# ── Veti IA – Configuración ───────────────────────────────
+def admin_veti(request):
+    admin_id = request.session.get('user_admin_id')
+    if not admin_id:
+        return redirect('login_admin')
+    admin_user = User_admin.objects.get(id=admin_id)
+    from .models import VetiConfig
+    config = VetiConfig.get_config()
+    return render(request, 'admin_veti.html', {
+        'config': config,
+        'admin_user': admin_user,
+        'current_tab': 'veti',
+    })
+
+def guardar_veti_config(request):
+    admin_id = request.session.get('user_admin_id')
+    if not admin_id:
+        return redirect('login_admin')
+    admin_user = User_admin.objects.get(id=admin_id)
+
+    if request.method == 'POST':
+        from .models import VetiConfig
+        config = VetiConfig.get_config()
+        config.system_prompt = request.POST.get('system_prompt', config.system_prompt).strip()
+        config.modelo         = request.POST.get('modelo', config.modelo).strip()
+        try:
+            config.temperatura = float(request.POST.get('temperatura', config.temperatura))
+            config.temperatura = max(0.0, min(2.0, config.temperatura))
+        except (ValueError, TypeError):
+            pass
+        try:
+            config.max_tokens = int(request.POST.get('max_tokens', config.max_tokens))
+            config.max_tokens = max(64, min(8192, config.max_tokens))
+        except (ValueError, TypeError):
+            pass
+        config.activo = request.POST.get('activo') == 'on'
+        config.save()
+        registrar_log_admin(admin_user, 'SISTEMA', "Actualizó la configuración del asistente Veti IA.", request)
+        messages.success(request, '✅ Configuración de Veti guardada correctamente.')
+
+    return redirect('admin_veti')

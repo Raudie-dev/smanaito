@@ -92,4 +92,58 @@ class LogSistemaAdmin(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"[{self.tipo}] {self.descripcion} ({self.timestamp|date:'d/m/Y H:i'})"
+        return f"[{self.tipo}] {self.descripcion}"
+
+
+# ── Configuración global de Veti IA ──────────────────────
+VETI_DEFAULT_PROMPT = (
+    "Eres Veti, un asistente de inteligencia artificial especializado en ganadería bovina. "
+    "Trabajas dentro de Samanito, un sistema de gestión ganadera. "
+    "Puedes ayudar con temas de manejo animal, reproducción, sanidad, nutrición, "
+    "registros zootécnicos, finanzas de finca, ordeño, engorde y todo lo relacionado "
+    "con la producción bovina. Responde siempre en español, de forma clara, profesional "
+    "y amigable. Si el usuario hace preguntas no relacionadas con ganadería, puedes "
+    "responderlas brevemente pero recuérdale tu especialidad."
+)
+
+class VetiConfig(models.Model):
+    """Singleton: configuración global del asistente Veti."""
+    system_prompt = models.TextField(
+        verbose_name="Prompt del sistema",
+        default=VETI_DEFAULT_PROMPT,
+        help_text="Instrucciones base que definen el comportamiento de Veti."
+    )
+    modelo = models.CharField(
+        max_length=60,
+        default="deepseek-chat",
+        verbose_name="Modelo DeepSeek",
+        help_text="Nombre del modelo a usar (ej: deepseek-chat, deepseek-reasoner)."
+    )
+    temperatura = models.FloatField(
+        default=0.7,
+        verbose_name="Temperatura (0.0 – 2.0)",
+        help_text="Controla la creatividad. 0 = preciso, 2 = muy creativo."
+    )
+    max_tokens = models.IntegerField(
+        default=1024,
+        verbose_name="Máx. tokens de respuesta",
+        help_text="Límite de longitud de cada respuesta."
+    )
+    activo = models.BooleanField(
+        default=True,
+        verbose_name="Veti habilitado",
+        help_text="Si está desactivado, el asistente no estará disponible para los usuarios."
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuración Veti"
+
+    def __str__(self):
+        return f"VetiConfig (modelo={self.modelo}, temp={self.temperatura})"
+
+    @classmethod
+    def get_config(cls):
+        """Devuelve la config singleton, creándola si no existe."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

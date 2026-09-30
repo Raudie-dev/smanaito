@@ -46,4 +46,8 @@ urlpatterns = [
     path('api/webauthn/login/options/', views.api_webauthn_login_options, name='webauthn_login_options'),
     path('api/webauthn/login/verify/', views.api_webauthn_login_verify, name='webauthn_login_verify'),
     path('api/webauthn/delete/<int:cred_id>/', views.api_webauthn_delete, name='webauthn_delete'),
+
+    # Asistente IA – Veti
+    path('asistente/', views.chat, name='chat'),
+    path('api/chat/', views.api_chat, name='api_chat'),
 ]

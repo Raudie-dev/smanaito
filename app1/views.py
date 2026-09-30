@@ -3,9 +3,12 @@ from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.db.models import Q, Sum, F
 from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 import datetime
 import json
 import secrets
+import os
+import urllib.request
 from .models import User, Finca, Animal, Rebaño, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, GastoRecurrente, LiquidacionLeche, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento, ProtocoloAlimentacion, LecturaComedero, OrdenCargaMixer, ServicioReproductivo, DiagnosticoGestacion, RegistroParto, Potrero, RotacionPotrero, ArticuloInventario, MovimientoInventario, CatalogoSemen, Empleado, PagoNomina, WebAuthnCredential, RegistroOrdeno
 
 from django.core.paginator import Paginator
@@ -2536,8 +2539,17 @@ def ordeno(request):
             fecha = request.POST.get('fecha') or datetime.date.today()
             turno = request.POST.get('turno', 'MAÑANA')
             rebano_id = request.POST.get('rebano_id') or None
-            animal_id = request.POST.get('animal_id') or None
-            vacas = int(request.POST.get('vacas_ordenadas') or 1)
+            animal_id = None
+            
+            # Calcular cantidad de vacas automáticamente
+            if rebano_id:
+                reb = Rebaño.objects.get(id=rebano_id, finca_id=finca_activa_id)
+                vacas = reb.get_animales().filter(sexo='H', estado_produccion='LACTANCIA').count()
+            else:
+                vacas = Animal.objects.filter(finca_id=finca_activa_id, sexo='H', estado_produccion='LACTANCIA').count()
+            
+            if vacas == 0:
+                vacas = 1
             litros = float(request.POST.get('litros_leche') or 0.0)
             precio = float(request.POST.get('precio_litro') or precio_config.precio_por_litro)
             temp = request.POST.get('temperatura_tanque')
@@ -2583,8 +2595,17 @@ def ordeno(request):
 
     # GET
     registros = RegistroOrdeno.objects.filter(finca_id=finca_activa_id).order_by('-fecha', '-id')
-    rebaños = Rebaño.objects.filter(finca_id=finca_activa_id)
-    animales = Animal.objects.filter(finca_id=finca_activa_id, sexo='HEMBRA')
+    # Filtrar solo animales hembras en lactancia
+    animales = Animal.objects.filter(finca_id=finca_activa_id, sexo='H', estado_produccion='LACTANCIA')
+    
+    # Filtrar solo rebaños que tengan al menos una vaca en lactancia
+    rebaños_todos = Rebaño.objects.filter(finca_id=finca_activa_id)
+    rebaños = []
+    for r in rebaños_todos:
+        count = r.get_animales().filter(sexo='H', estado_produccion='LACTANCIA').count()
+        if count > 0:
+            r.vacas_lactancia_count = count
+            rebaños.append(r)
 
     # KPIs
     today = datetime.date.today()
@@ -2596,7 +2617,8 @@ def ordeno(request):
     inicio_mes = today.replace(day=1)
     registros_mes = registros.filter(fecha__gte=inicio_mes)
     litros_mes = registros_mes.aggregate(Sum('litros_leche'))['litros_leche__sum'] or 0.0
-    ingreso_mes = round(float(litros_mes) * float(precio_config.precio_por_litro), 2)
+    ingreso_mes = sum((r.litros_leche * r.precio_litro) for r in registros_mes)
+    ingreso_mes = round(float(ingreso_mes), 2)
 
     # Chart data (last 14 days)
     fechas_chart = []
@@ -2627,3 +2649,228 @@ def ordeno(request):
     }
     return render(request, 'ordeno.html', context)
 
+
+# ──────────────────────────────────────────────
+# ASISTENTE IA – VETI (DeepSeek)
+# ──────────────────────────────────────────────
+
+def chat(request):
+    """Vista principal del chat con Veti."""
+    user_id = request.session.get('user')
+    if not user_id:
+        return redirect('login')
+
+    usuario = get_object_or_404(User, id=user_id)
+    finca_activa_id, fincas_usuario = get_finca_context(request, usuario)
+
+    context = {
+        'usuario': usuario,
+        'fincas_usuario': fincas_usuario,
+        'finca_activa_id': finca_activa_id,
+    }
+    return render(request, 'chat.html', context)
+
+
+def build_veti_context(usuario, finca):
+    """
+    Construye un bloque de contexto con datos reales de la finca activa
+    para inyectarlo en el prompt de Veti.
+    """
+    import datetime
+    from django.db.models import Sum
+
+    if not finca:
+        return """\n\n--- CONTEXTO DEL USUARIO ---
+Usuario: {nombre}\nFinca activa: No seleccionada""".format(nombre=usuario.nombre)
+
+    hoy = datetime.date.today()
+    hace_7 = hoy - datetime.timedelta(days=7)
+    hace_30 = hoy - datetime.timedelta(days=30)
+
+    lineas = []
+    lineas.append(f"\n\n=== CONTEXTO EN TIEMPO REAL DE LA FINCA (usa esta información para responder preguntas específicas) ===")
+    lineas.append(f"Usuario: {usuario.nombre}")
+    lineas.append(f"Finca activa: {finca.nombre}")
+    lineas.append(f"Fecha actual: {hoy.strftime('%d/%m/%Y')}")
+
+    # ── Inventario animal ─────────────────────────
+    try:
+        animales_vivos = Animal.objects.filter(finca=finca, estado_vida='VIVO')
+        total = animales_vivos.count()
+        hembras = animales_vivos.filter(sexo='H').count()
+        machos  = animales_vivos.filter(sexo='M').count()
+        lactancia = animales_vivos.filter(estado_produccion='LACTANCIA').count()
+        preñadas  = animales_vivos.filter(estado_gestacion='PREÑADA').count()
+        en_tratamiento = animales_vivos.filter(estado_salud='TRATAMIENTO').count()
+        lineas.append(f"\n[INVENTARIO ANIMAL]")
+        lineas.append(f"- Total animales vivos en finca: {total} (Hembras: {hembras}, Machos: {machos})")
+        lineas.append(f"- Vacas en lactancia: {lactancia}")
+        lineas.append(f"- Vacas preñadas: {preñadas}")
+        lineas.append(f"- Animales en tratamiento sanitario: {en_tratamiento}")
+
+        # Último animal registrado
+        ultimo_animal = Animal.objects.filter(finca=finca).order_by('-id').first()
+        if ultimo_animal:
+            lineas.append(f"- Último animal registrado: {ultimo_animal.codigo} – {ultimo_animal.nombre} (Sexo: {'Macho' if ultimo_animal.sexo == 'M' else 'Hembra'}, Nac: {ultimo_animal.fecha_nacimiento})")
+    except Exception:
+        pass
+
+    # ── Producción de leche ───────────────────────
+    try:
+        ordenos_7d = RegistroOrdeno.objects.filter(finca=finca, fecha__gte=hace_7)
+        litros_7d = ordenos_7d.aggregate(total=Sum('litros_leche'))['total'] or 0
+        ordenos_30d = RegistroOrdeno.objects.filter(finca=finca, fecha__gte=hace_30)
+        litros_30d = ordenos_30d.aggregate(total=Sum('litros_leche'))['total'] or 0
+        ultimo_ordeno = RegistroOrdeno.objects.filter(finca=finca).order_by('-fecha', '-created_at').first()
+        lineas.append(f"\n[PRODUCCIÓN DE LECHE]")
+        lineas.append(f"- Producción últimos 7 días: {float(litros_7d):.1f} litros")
+        lineas.append(f"- Producción últimos 30 días: {float(litros_30d):.1f} litros")
+        if ultimo_ordeno:
+            lineas.append(f"- Último ordeño registrado: {ultimo_ordeno.fecha} – {float(ultimo_ordeno.litros_leche):.1f} L ({ultimo_ordeno.get_turno_display()}, {ultimo_ordeno.vacas_ordenadas} vacas)")
+    except Exception:
+        pass
+
+    # ── Sanidad ───────────────────────────────────
+    try:
+        incidentes_abiertos = IncidenteSanitario.objects.filter(
+            finca=finca, estado__in=['ATENDIENDO', 'RECUPERACION']
+        ).select_related('animal').order_by('-fecha_incidente')[:5]
+        lineas.append(f"\n[SANIDAD ACTIVA]")
+        if incidentes_abiertos:
+            for inc in incidentes_abiertos:
+                lineas.append(f"  • {inc.animal.codigo} ({inc.animal.nombre}): {inc.diagnostico} – Estado: {inc.get_estado_display()} ({inc.fecha_incidente})")
+        else:
+            lineas.append("  • Sin incidentes sanitarios activos.")
+    except Exception:
+        pass
+
+    # ── Vacunas próximas ──────────────────────────
+    try:
+        vacunas_pendientes = PlanVacunacion.objects.filter(
+            finca=finca, estado='PENDIENTE', fecha_programada__gte=hoy
+        ).order_by('fecha_programada')[:3]
+        lineas.append(f"\n[VACUNAS PENDIENTES]")
+        if vacunas_pendientes:
+            for v in vacunas_pendientes:
+                lineas.append(f"  • {v.vacuna} – Programada: {v.fecha_programada}")
+        else:
+            lineas.append("  • Sin vacunas pendientes próximas.")
+    except Exception:
+        pass
+
+    # ── Finanzas recientes ────────────────────────
+    try:
+        gastos_30d = GastoFinca.objects.filter(finca=finca, fecha__gte=hace_30).aggregate(total=Sum('monto'))['total'] or 0
+        liq_reciente = LiquidacionLeche.objects.filter(finca=finca).order_by('-fecha_fin').first()
+        lineas.append(f"\n[FINANZAS]")
+        lineas.append(f"- Gastos últimos 30 días: ${float(gastos_30d):.2f}")
+        if liq_reciente:
+            lineas.append(f"- Última liquidación de leche: {liq_reciente.fecha_inicio} a {liq_reciente.fecha_fin} – {float(liq_reciente.litros_totales):.1f} L – ${float(liq_reciente.monto_total):.2f} [{liq_reciente.get_estado_pago_display()}]")
+    except Exception:
+        pass
+
+    lineas.append("="*60)
+    return "\n".join(lineas)
+
+
+@csrf_exempt
+def api_chat(request):
+    """Endpoint que recibe un mensaje y retorna la respuesta de DeepSeek."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    user_id = request.session.get('user')
+    if not user_id:
+        return JsonResponse({'error': 'No autenticado'}, status=401)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    messages_history = body.get('messages', [])
+    if not messages_history:
+        return JsonResponse({'error': 'Sin mensajes'}, status=400)
+
+    api_key = os.environ.get('DEEPSEEK_API_KEY', '')
+    if not api_key:
+        return JsonResponse({'error': 'API Key no configurada'}, status=500)
+
+    # ── Cargar datos reales de la finca del usuario ──
+    try:
+        usuario_obj = User.objects.get(id=user_id)
+        finca_id = request.session.get('finca_activa_id')
+        finca_obj = None
+        if finca_id:
+            try:
+                finca_obj = Finca.objects.get(id=finca_id, usuario=usuario_obj)
+            except Finca.DoesNotExist:
+                pass
+        finca_context = build_veti_context(usuario_obj, finca_obj)
+    except Exception:
+        finca_context = ""
+
+    # Leer configuración dinámica desde la BD
+    try:
+        from app2.models import VetiConfig
+        veti_cfg = VetiConfig.get_config()
+        if not veti_cfg.activo:
+            return JsonResponse({'error': 'El asistente Veti no está disponible en este momento.'}, status=503)
+        system_prompt = veti_cfg.system_prompt + finca_context
+        modelo        = veti_cfg.modelo
+        temperatura   = veti_cfg.temperatura
+        max_tokens    = veti_cfg.max_tokens
+    except Exception:
+        # Fallback a valores por defecto si la BD falla
+        system_prompt = (
+            "Eres Veti, un asistente de inteligencia artificial especializado en ganadería bovina. "
+            "Trabajas dentro de Samanito, un sistema de gestión ganadera. "
+            "Responde siempre en español, de forma clara, profesional y amigable."
+        )
+        modelo      = "deepseek-chat"
+        temperatura = 0.7
+        max_tokens  = 1024
+
+    # Detectar si hay contenido multimodal (imágenes) en el historial
+    # DeepSeek requiere usar deepseek-flash para soporte de visión.
+    has_image = False
+    for msg in messages_history:
+        if isinstance(msg.get('content'), list):
+            for part in msg['content']:
+                if part.get('type') == 'image_url':
+                    has_image = True
+                    break
+        if has_image:
+            break
+
+    if has_image:
+        modelo = 'deepseek-flash'
+
+    payload = {
+        "model": modelo,
+        "messages": [{"role": "system", "content": system_prompt}] + messages_history,
+        "temperature": temperatura,
+        "max_tokens": max_tokens,
+    }
+
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(
+        'https://api.deepseek.com/chat/completions',
+        data=data,
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {api_key}',
+        },
+        method='POST',
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            reply = result['choices'][0]['message']['content']
+            return JsonResponse({'reply': reply})
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8') if e.fp else str(e)
+        return JsonResponse({'error': f'Error API: {e.code}', 'detail': error_body}, status=502)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
