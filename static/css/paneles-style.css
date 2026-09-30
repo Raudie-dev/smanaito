@@ -356,7 +356,7 @@ body {
     padding: 0.5rem;
     display: flex;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
@@ -375,6 +375,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
     transition: all 0.2s ease;
 }
 
