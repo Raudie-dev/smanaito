@@ -19,6 +19,9 @@ body {
     overflow-x: hidden; 
     font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--bg-main);
+    font-size: 1.125rem; /* 18px base para accesibilidad */
+    line-height: 1.6;
+    color: #212529; /* Alto contraste */
 }
 
 /* Sidebar Styles */
@@ -130,8 +133,8 @@ body {
 }
 
 .card h5 {
-    color: #555;
-    font-size: 1rem;
+    color: #212529;
+    font-size: 1.125rem;
     font-weight: 600;
 }
 
@@ -157,7 +160,7 @@ body {
 .table tbody td {
     padding: 15px;
     vertical-align: middle;
-    color: #444;
+    color: #212529;
 }
 
 .badge {
@@ -320,3 +323,81 @@ body {
 * {
     -webkit-tap-highlight-color: transparent;
 }
+
+/* ==============================================================
+   ACCESIBILIDAD Y UX/UI - (Adaptaciones Adultos Mayores)
+   ============================================================== */
+/* Botones amplios y táctiles */
+.btn {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 0.5rem 1.25rem;
+    font-size: 1.125rem;
+}
+
+/* Contornos claros para navegación por teclado / puntero */
+.btn:focus-visible, .nav-link:focus-visible, .form-control:focus-visible, .form-select:focus-visible {
+    outline: 3px solid var(--primary-color) !important;
+    outline-offset: 2px;
+}
+
+/* Inputs de formularios legibles y accesibles */
+.form-control, .form-select {
+    min-height: 48px;
+    font-size: 1.125rem;
+    padding: 0.5rem 1rem;
+}
+
+/* Estilo para las secciones separadas por barra (nav-folders) */
+.nav-folders {
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.nav-folders .nav-item {
+    margin: 0;
+}
+
+.nav-folders .nav-link {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #64748b;
+    background-color: transparent;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.nav-folders .nav-link:hover {
+    background-color: #f8fafc;
+    color: #334155;
+    border-color: #cbd5e1;
+}
+
+.nav-folders .nav-link.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 6px rgba(46, 125, 50, 0.2);
+}
+
+.nav-folders-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: 1.5rem;
+}
+.nav-folders-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
