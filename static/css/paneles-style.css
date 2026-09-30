@@ -350,14 +350,11 @@ body {
 
 /* Estilo para las secciones separadas por barra (nav-folders) */
 .nav-folders {
-    background-color: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0.5rem;
     display: flex;
     gap: 0.5rem;
     flex-wrap: nowrap;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    margin: 0;
+    padding: 0;
 }
 
 .nav-folders .nav-item {
@@ -393,6 +390,11 @@ body {
 }
 
 .nav-folders-wrapper {
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
