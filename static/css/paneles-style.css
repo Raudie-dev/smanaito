@@ -354,7 +354,7 @@ body {
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 0.5rem;
-    display: inline-flex;
+    display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
@@ -385,10 +385,10 @@ body {
 }
 
 .nav-folders .nav-link.active {
-    background-color: #900c3f; /* Rojo/Vino como en la imagen de referencia */
-    border-color: #900c3f;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
     color: white;
-    box-shadow: 0 4px 6px rgba(144,12,63,0.2);
+    box-shadow: 0 4px 6px rgba(46, 125, 50, 0.2);
 }
 
 .nav-folders-wrapper {
