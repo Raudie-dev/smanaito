@@ -14,23 +14,25 @@
 {% endif %}
 
 <!-- Tarjetas de navegación por pestaña (Bootstrap Pills horizontal) -->
-<ul class="nav nav-pills mb-4 mt-3" id="perfilTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="tab-cuenta-btn" data-bs-toggle="pill" data-bs-target="#tab-cuenta" type="button" role="tab">
-            <i class="bi bi-person-lines-fill me-1"></i> Mi Cuenta
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-config-btn" data-bs-toggle="pill" data-bs-target="#tab-config" type="button" role="tab">
-            <i class="bi bi-sliders me-1"></i> Configuración General
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-seguridad-btn" data-bs-toggle="pill" data-bs-target="#tab-seguridad" type="button" role="tab">
-            <i class="bi bi-shield-lock me-1"></i> Seguridad y Acceso
-        </button>
-    </li>
-</ul>
+<div class="nav-folders-wrapper mt-3 mb-4">
+    <ul class="nav nav-folders" id="perfilTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-cuenta-btn" data-bs-toggle="pill" data-bs-target="#tab-cuenta" type="button" role="tab">
+                <i class="bi bi-person-lines-fill me-1"></i> Mi Cuenta
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-config-btn" data-bs-toggle="pill" data-bs-target="#tab-config" type="button" role="tab">
+                <i class="bi bi-sliders me-1"></i> Configuración General
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-seguridad-btn" data-bs-toggle="pill" data-bs-target="#tab-seguridad" type="button" role="tab">
+                <i class="bi bi-shield-lock me-1"></i> Seguridad y Acceso
+            </button>
+        </li>
+    </ul>
+</div>
 
 <div class="tab-content" id="perfilTabsContent">
 
