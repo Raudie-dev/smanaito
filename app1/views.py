@@ -9,6 +9,7 @@ import json
 import secrets
 import os
 import urllib.request
+import urllib.error
 from .models import User, Finca, Animal, Rebaño, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, GastoRecurrente, LiquidacionLeche, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento, ProtocoloAlimentacion, LecturaComedero, OrdenCargaMixer, ServicioReproductivo, DiagnosticoGestacion, RegistroParto, Potrero, RotacionPotrero, ArticuloInventario, MovimientoInventario, CatalogoSemen, Empleado, PagoNomina, WebAuthnCredential, RegistroOrdeno
 
 from django.core.paginator import Paginator
@@ -2858,7 +2859,8 @@ Formato estricto:
         max_tokens  = 1024
 
     # Detectar si hay contenido multimodal (imágenes) en el historial
-    # DeepSeek requiere usar deepseek-flash para soporte de visión.
+    # DeepSeek actualmente no soporta visión de forma estándar bajo el nombre deepseek-flash.
+    # Por ahora, dejaremos el modelo intacto. Si la API de DeepSeek rechaza imágenes, fallará limpiamente.
     has_image = False
     for msg in messages_history:
         if isinstance(msg.get('content'), list):
@@ -2868,9 +2870,6 @@ Formato estricto:
                     break
         if has_image:
             break
-
-    if has_image:
-        modelo = 'deepseek-flash'
 
     tools = [
         {
@@ -2968,4 +2967,6 @@ Formato estricto:
         error_body = e.read().decode('utf-8') if e.fp else str(e)
         return JsonResponse({'error': f'Error API: {e.code}', 'detail': error_body}, status=502)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
