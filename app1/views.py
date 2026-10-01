@@ -2709,15 +2709,15 @@ Usuario: {nombre}\nFinca activa: No seleccionada""".format(nombre=usuario.nombre
         lineas.append(f"- Animales en tratamiento sanitario: {en_tratamiento}")
 
         # Últimos registros
-        ultimo_animal = Animal.objects.filter(finca=finca).order_by('-created_at').first()
-        ultima_hembra = Animal.objects.filter(finca=finca, sexo='H').order_by('-created_at').first()
+        ultimo_animal = Animal.objects.filter(finca=finca).order_by('-id').first()
+        ultima_hembra = Animal.objects.filter(finca=finca, sexo='H').order_by('-id').first()
         if ultimo_animal:
             lineas.append(f"- Último animal registrado en general: ID: {ultimo_animal.id} | {ultimo_animal.codigo} – {ultimo_animal.nombre} (Sexo: {'Macho' if ultimo_animal.sexo == 'M' else 'Hembra'}, Nac: {ultimo_animal.fecha_nacimiento})")
         if ultima_hembra:
             lineas.append(f"- Última hembra registrada: ID: {ultima_hembra.id} | {ultima_hembra.codigo} – {ultima_hembra.nombre} (Nac: {ultima_hembra.fecha_nacimiento})")
         
         # Últimos 5 animales registrados
-        ultimos_5 = Animal.objects.filter(finca=finca).order_by('-created_at')[:5]
+        ultimos_5 = Animal.objects.filter(finca=finca).order_by('-id')[:5]
         if ultimos_5:
             lineas.append("\n[ÚLTIMOS 5 ANIMALES INGRESADOS AL SISTEMA]")
             for a in ultimos_5:
@@ -2940,7 +2940,7 @@ Formato estricto:
                     elif order == 'edad_desc':
                         qs = qs.order_by('fecha_nacimiento')
                     elif order == 'recientes':
-                        qs = qs.order_by('-created_at')
+                        qs = qs.order_by('-id')
                     
                     limit = min(args.get('limit', 15), 50)
                     animales = qs[:limit]
