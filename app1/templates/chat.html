@@ -5,6 +5,9 @@
 {% block section_title %}Veti IA{% endblock %}
 
 {% block extra_css %}
+<!-- Chart.js para MCP UI -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
   /* ═══════════════════════════════════════════
      CHAT PAGE – VARIABLES
@@ -660,6 +663,71 @@
     .msg-row, .typing-row { padding-left: 12px; padding-right: 12px; }
     #cs-toggle-open { display: flex !important; }
   }
+
+  /* ═══════════════════════════════════════════
+     MCP UI STYLES
+  ═══════════════════════════════════════════ */
+  .mcp-chart-container {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 12px 0;
+    width: 100%;
+    max-width: 400px;
+    height: 250px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .mcp-animal-card {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 12px 0;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    gap: 12px;
+  }
+  .mcp-ac-icon {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: #e8f5e9;
+    color: #2e7d32;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+  .mcp-ac-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .mcp-ac-name {
+    font-weight: 600;
+    color: #111827;
+    font-size: 1rem;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mcp-ac-code {
+    font-size: 0.8rem;
+    color: #6b7280;
+  }
+  .mcp-ac-btn {
+    padding: 6px 12px;
+    background: #2e7d32;
+    color: #fff !important;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: background .2s;
+  }
+  .mcp-ac-btn:hover { background: #1b5e20; }
 </style>
 {% endblock %}
 
@@ -1087,8 +1155,37 @@ function getTime() {
 }
 
 function parseMd(text) {
-  return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  let escaped = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  
+  // Parse MCP UI tags back to HTML (ahora usando comillas dobles normales o simples)
+  escaped = escaped.replace(/&lt;chart\s+type=(["'])([^"']+)\1\s+labels=(["'])([^"']+)\3\s+data=(["'])([^"']+)\5\s+title=(["'])([^"']*)\7&gt;&lt;\/chart&gt;/gi, function(match, q1, type, q2, labels, q3, data, q4, title) {
+    const chartId = 'chart-' + Math.random().toString(36).substr(2, 9);
+    return `<div class="mcp-chart-container"><canvas class="mcp-canvas" id="${chartId}" data-type="${type}" data-labels="${labels}" data-data="${data}" data-title="${title}"></canvas></div>`;
+  });
+
+  escaped = escaped.replace(/&lt;animal-card\s+id=(["'])([^"']+)\1\s+name=(["'])([^"']+)\3\s+code=(["'])([^"']+)\5&gt;&lt;\/animal-card&gt;/gi, function(match, q1, id, q2, name, q3, code) {
+    return `<div class="mcp-animal-card">
+      <div class="mcp-ac-icon">🐄</div>
+      <div class="mcp-ac-info">
+        <div class="mcp-ac-name">${name}</div>
+        <div class="mcp-ac-code">${code}</div>
+      </div>
+      <a href="/hoja_vida/${id}/" target="_blank" class="mcp-ac-btn">Ver Ficha</a>
+    </div>`;
+  });
+
+  // Parse Markdown Tables
+  escaped = escaped.replace(/(?:^|\n)((?:\|[^|\n]+)+\|)[ \t]*\n((?:\|[ \t]*[-:]+[-:| \t]*)+\|)[ \t]*\n((?:(?:\|[^|\n]+)+\|[ \t]*(?:\n|$))+)/g, function(match, header, sep, body) {
+    let thead = '<tr>' + header.split('|').filter(c => c.trim() !== '').map(c => `<th>${c.trim()}</th>`).join('') + '</tr>';
+    let tbody = body.trim().split('\n').map(row => {
+      let cells = row.split('|').filter((c, i, arr) => !(i === 0 && c.trim() === '') && !(i === arr.length - 1 && c.trim() === ''));
+      return '<tr>' + cells.map(c => `<td>${c.trim()}</td>`).join('') + '</tr>';
+    }).join('');
+    return `<div class="table-responsive"><table class="table table-bordered table-sm mt-2 mb-2" style="font-size:0.85rem;"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+  });
+
+  return escaped
     .replace(/```([\s\S]*?)```/g,'<pre><code>$1</code></pre>')
     .replace(/`([^`\n]+)`/g,'<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
@@ -1143,6 +1240,31 @@ function appendBubble(role, content, animate = true) {
 
   messagesEl.appendChild(row);
   if (animate) scrollBottom();
+
+  // Inicializar gráficos si existen en el mensaje
+  row.querySelectorAll('canvas.mcp-canvas').forEach(canvas => {
+    if (window.Chart) {
+      new Chart(canvas, {
+        type: canvas.dataset.type || 'bar',
+        data: {
+          labels: canvas.dataset.labels ? canvas.dataset.labels.split(',') : [],
+          datasets: [{
+            label: canvas.dataset.title || 'Datos',
+            data: canvas.dataset.data ? canvas.dataset.data.split(',').map(Number) : [],
+            backgroundColor: '#2e7d32',
+            borderRadius: 4
+          }]
+        },
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: canvas.dataset.title ? true : false }
+          }
+        }
+      });
+    }
+  });
 }
 
 function showTyping() {

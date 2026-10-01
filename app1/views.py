@@ -2501,7 +2501,7 @@ def hoja_vida(request, animal_id):
         timeline.append({'fecha': p.fecha, 'tipo': 'PESAJE', 'desc': f'Pesaje: {p.peso_kg} kg'})
     # 3. Sanidad
     for i in IncidenteSanitario.objects.filter(animal=animal):
-        timeline.append({'fecha': i.fecha_incidente, 'tipo': 'SANIDAD', 'desc': f'{i.tipo}: {i.descripcion}'})
+        timeline.append({'fecha': i.fecha_incidente, 'tipo': 'SANIDAD', 'desc': f'{i.get_tipo_display()}: {i.diagnostico}'})
     # 4. Reproduccion (Si es hembra)
     if animal.sexo == 'H':
         for s in ServicioReproductivo.objects.filter(hembra=animal):
@@ -2708,10 +2708,21 @@ Usuario: {nombre}\nFinca activa: No seleccionada""".format(nombre=usuario.nombre
         lineas.append(f"- Vacas preñadas: {preñadas}")
         lineas.append(f"- Animales en tratamiento sanitario: {en_tratamiento}")
 
-        # Último animal registrado
-        ultimo_animal = Animal.objects.filter(finca=finca).order_by('-id').first()
+        # Últimos registros
+        ultimo_animal = Animal.objects.filter(finca=finca).order_by('-created_at').first()
+        ultima_hembra = Animal.objects.filter(finca=finca, sexo='H').order_by('-created_at').first()
         if ultimo_animal:
-            lineas.append(f"- Último animal registrado: {ultimo_animal.codigo} – {ultimo_animal.nombre} (Sexo: {'Macho' if ultimo_animal.sexo == 'M' else 'Hembra'}, Nac: {ultimo_animal.fecha_nacimiento})")
+            lineas.append(f"- Último animal registrado en general: ID: {ultimo_animal.id} | {ultimo_animal.codigo} – {ultimo_animal.nombre} (Sexo: {'Macho' if ultimo_animal.sexo == 'M' else 'Hembra'}, Nac: {ultimo_animal.fecha_nacimiento})")
+        if ultima_hembra:
+            lineas.append(f"- Última hembra registrada: ID: {ultima_hembra.id} | {ultima_hembra.codigo} – {ultima_hembra.nombre} (Nac: {ultima_hembra.fecha_nacimiento})")
+        
+        # Últimos 5 animales registrados
+        ultimos_5 = Animal.objects.filter(finca=finca).order_by('-created_at')[:5]
+        if ultimos_5:
+            lineas.append("\n[ÚLTIMOS 5 ANIMALES INGRESADOS AL SISTEMA]")
+            for a in ultimos_5:
+                sexo_str = "Hembra" if a.sexo == "H" else "Macho"
+                lineas.append(f"  • ID: {a.id} | {a.codigo} - {a.nombre} | {sexo_str} | Nac: {a.fecha_nacimiento}")
     except Exception:
         pass
 
@@ -2810,13 +2821,28 @@ def api_chat(request):
     except Exception:
         finca_context = ""
 
+    # Instrucciones MCP UI (Componentes Visuales)
+    mcp_instructions = """
+\n\n=== UI COMPONENTS (MCP UI) ===
+Puedes devolver componentes visuales usando etiquetas especiales HTML en tu respuesta. El sistema las renderizará automáticamente.
+
+1. Gráficos de barra: Si te preguntan por producciones, comparativas o estadísticas, o si crees que la respuesta se entendería mejor con un gráfico de barras, genera uno.
+Formato estricto (NO uses markdown backticks para el chart):
+<chart type="bar" labels="Ene,Feb,Mar" data="10,20,30" title="Producción"></chart>
+
+2. Fichas de animal: Si vas a mostrar o listar animales, genera tarjetas visuales para ellos.
+Formato estricto:
+<animal-card id="ID_NUMERICO" name="NOMBRE" code="CODIGO"></animal-card>
+(IMPORTANTE: En el atributo 'id' debes poner SÓLO el número ID interno de la base de datos (por ejemplo id="4"), NO pongas el código alfanumérico ahí. El código va en el atributo 'code'). Si no tienes el ID exacto en tu contexto, DEBES llamar primero a la herramienta listar_animales para obtenerlo; NUNCA inventes o repitas un ID falso.
+"""
+
     # Leer configuración dinámica desde la BD
     try:
         from app2.models import VetiConfig
         veti_cfg = VetiConfig.get_config()
         if not veti_cfg.activo:
             return JsonResponse({'error': 'El asistente Veti no está disponible en este momento.'}, status=503)
-        system_prompt = veti_cfg.system_prompt + finca_context
+        system_prompt = veti_cfg.system_prompt + finca_context + mcp_instructions
         modelo        = veti_cfg.modelo
         temperatura   = veti_cfg.temperatura
         max_tokens    = veti_cfg.max_tokens
@@ -2826,7 +2852,7 @@ def api_chat(request):
             "Eres Veti, un asistente de inteligencia artificial especializado en ganadería bovina. "
             "Trabajas dentro de Samanito, un sistema de gestión ganadera. "
             "Responde siempre en español, de forma clara, profesional y amigable."
-        )
+        ) + finca_context + mcp_instructions
         modelo      = "deepseek-chat"
         temperatura = 0.7
         max_tokens  = 1024
@@ -2846,29 +2872,98 @@ def api_chat(request):
     if has_image:
         modelo = 'deepseek-flash'
 
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "listar_animales",
+                "description": "Obtiene una lista de animales de la finca según filtros. Úsalo cuando el usuario pida listar, buscar, o preguntar por animales (ej. machos más viejos, vacas secas, etc).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sexo": {"type": "string", "enum": ["M", "H"], "description": "Sexo del animal (M o H)"},
+                        "estado_produccion": {"type": "string", "description": "Ej: LACTANCIA, SECA, HORRO, DESCARTE"},
+                        "order_by": {"type": "string", "enum": ["edad_asc", "edad_desc", "recientes"], "description": "Ordenamiento: edad_asc (jóvenes), edad_desc (viejos), recientes"},
+                        "limit": {"type": "integer", "description": "Cantidad máxima a devolver (max 50, por defecto 10)"}
+                    }
+                }
+            }
+        }
+    ]
+
     payload = {
         "model": modelo,
         "messages": [{"role": "system", "content": system_prompt}] + messages_history,
         "temperature": temperatura,
         "max_tokens": max_tokens,
+        "tools": tools,
     }
 
-    data = json.dumps(payload).encode('utf-8')
-    req = urllib.request.Request(
-        'https://api.deepseek.com/chat/completions',
-        data=data,
-        headers={
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {api_key}',
-        },
-        method='POST',
-    )
+    def make_api_call(payload_data):
+        data = json.dumps(payload_data).encode('utf-8')
+        req = urllib.request.Request(
+            'https://api.deepseek.com/chat/completions',
+            data=data,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {api_key}',
+            },
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=30) as response:
+            return json.loads(response.read().decode('utf-8'))
 
     try:
-        with urllib.request.urlopen(req, timeout=30) as response:
-            result = json.loads(response.read().decode('utf-8'))
+        result = make_api_call(payload)
+        message = result['choices'][0]['message']
+
+        # Verificar si el modelo decidió llamar a una herramienta
+        if message.get('tool_calls'):
+            payload["messages"].append(message)
+            for tool_call in message['tool_calls']:
+                if tool_call['function']['name'] == 'listar_animales':
+                    try:
+                        args = json.loads(tool_call['function']['arguments'])
+                    except:
+                        args = {}
+                    
+                    qs = Animal.objects.filter(finca=finca_obj, estado_vida='VIVO') if finca_obj else Animal.objects.none()
+                    
+                    if args.get('sexo'):
+                        qs = qs.filter(sexo=args['sexo'])
+                    if args.get('estado_produccion'):
+                        qs = qs.filter(estado_produccion__iexact=args['estado_produccion'])
+                    
+                    order = args.get('order_by')
+                    if order == 'edad_asc':
+                        qs = qs.order_by('-fecha_nacimiento')
+                    elif order == 'edad_desc':
+                        qs = qs.order_by('fecha_nacimiento')
+                    elif order == 'recientes':
+                        qs = qs.order_by('-created_at')
+                    
+                    limit = min(args.get('limit', 15), 50)
+                    animales = qs[:limit]
+                    
+                    res_lines = []
+                    for a in animales:
+                        res_lines.append(f"ID: {a.id} | Código: {a.codigo} | Nombre: {a.nombre} | Nac: {a.fecha_nacimiento} | Sexo: {a.sexo} | Prod: {a.estado_produccion}")
+                    
+                    res_str = "\n".join(res_lines) if res_lines else "No se encontraron animales con esos filtros en la base de datos."
+                    
+                    payload["messages"].append({
+                        "role": "tool",
+                        "tool_call_id": tool_call['id'],
+                        "content": res_str
+                    })
+            
+            # Segunda llamada con los resultados de la DB
+            result = make_api_call(payload)
             reply = result['choices'][0]['message']['content']
-            return JsonResponse({'reply': reply})
+        else:
+            reply = message['content']
+
+        return JsonResponse({'reply': reply})
     except urllib.error.HTTPError as e:
         error_body = e.read().decode('utf-8') if e.fp else str(e)
         return JsonResponse({'error': f'Error API: {e.code}', 'detail': error_body}, status=502)
