@@ -2910,7 +2910,7 @@ Formato estricto:
             },
             method='POST',
         )
-        with urllib.request.urlopen(req, timeout=30) as response:
+        with urllib.request.urlopen(req, timeout=60) as response:
             return json.loads(response.read().decode('utf-8'))
 
     try:
