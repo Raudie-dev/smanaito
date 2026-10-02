@@ -14,6 +14,9 @@ class PlanSaaS(models.Model):
     codigo = models.CharField(max_length=50, unique=True, help_text="Ej: BASICO, PLUS, PREMIUM")
     nombre = models.CharField(max_length=150)
     precio_mensual = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    descuento_3_meses = models.IntegerField(default=0, help_text="Descuento en porcentaje (ej. 10 para 10%)")
+    descuento_6_meses = models.IntegerField(default=0, help_text="Descuento en porcentaje")
+    descuento_12_meses = models.IntegerField(default=0, help_text="Descuento en porcentaje")
     badge = models.CharField(max_length=50, default="Popular")
     descripcion = models.TextField(blank=True, null=True)
     limite_fincas = models.IntegerField(default=1)
@@ -37,6 +40,7 @@ class PlanSaaS(models.Model):
     mod_finanzas = models.BooleanField(default=True, verbose_name="Módulo de Finanzas")
     mod_estructura_costos = models.BooleanField(default=True, verbose_name="Módulo de Estructura de Costos")
     mod_auditoria = models.BooleanField(default=True, verbose_name="Módulo de Auditoría")
+    mod_chat_ia = models.BooleanField(default=True, verbose_name="Módulo de Asistente IA (Veti)")
 
     def __str__(self):
         return f"{self.nombre} (${self.precio_mensual}/mes)"
@@ -66,18 +70,30 @@ class Suscripcion(models.Model):
     def __str__(self):
         return f"Suscripción de {self.usuario.nombre} - {self.plan}"
 
+class MetodoPago(models.Model):
+    nombre = models.CharField(max_length=100, help_text="Ej: Binance Pay, Banesco, Zelle...")
+    region = models.CharField(max_length=100, default='Global', help_text="Ej: Venezuela, Colombia, Global...")
+    campos_personalizados = models.JSONField(default=dict, help_text="Campos dinámicos del método de pago")
+    instrucciones = models.TextField(blank=True, null=True, help_text="Instrucciones adicionales para el usuario al pagar")
+    activo = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.nombre} ({self.region})"
+
 class PagoSuscripcion(models.Model):
     ESTADO_PAGO = [
-        ('AL_DIA', 'Al Día'),
-        ('PENDIENTE', 'Pendiente / Debe'),
+        ('AL_DIA', 'Aprobado / Al Día'),
+        ('PENDIENTE', 'Pendiente / En Revisión'),
         ('RECHAZADO', 'Rechazado'),
     ]
     suscripcion = models.ForeignKey(Suscripcion, on_delete=models.CASCADE, related_name='pagos')
     monto = models.DecimalField(max_digits=10, decimal_places=2)
+    meses_pagados = models.IntegerField(default=1, help_text="Cantidad de meses que cubre este pago")
     fecha_pago = models.DateField()
     periodo_correspondiente = models.CharField(max_length=50, help_text="Ej: Septiembre 2026")
     estado = models.CharField(max_length=20, choices=ESTADO_PAGO, default='AL_DIA')
-    comprobante = models.CharField(max_length=100, blank=True, null=True)
+    metodo_pago = models.ForeignKey(MetodoPago, on_delete=models.SET_NULL, null=True, blank=True, related_name='pagos_recibidos')
+    comprobante = models.ImageField(upload_to='comprobantes/', blank=True, null=True)
     registrado_por = models.ForeignKey(User_admin, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

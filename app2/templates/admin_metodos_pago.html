@@ -1,0 +1,192 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Métodos de Pago | Master Admin{% endblock %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold m-0"><i class="bi bi-wallet2 text-primary me-2"></i> Métodos de Pago</h3>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalMetodoPago" onclick="resetForm('modalMetodoPago')">
+        <i class="bi bi-plus-lg me-1"></i> Añadir Método
+    </button>
+</div>
+
+<div class="row">
+    {% for metodo in metodos %}
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm border-0 h-100 {% if not metodo.activo %}opacity-50{% endif %}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <h5 class="fw-bold m-0">{{ metodo.nombre }}</h5>
+                </div>
+                <div class="mb-2 text-muted small"><i class="bi bi-geo-alt-fill me-1"></i>{{ metodo.region }}</div>
+                <hr>
+                
+                {% for key, val in metodo.campos_personalizados.items %}
+                <p class="mb-1 small"><strong>{{ key }}:</strong> <span class="text-primary fw-bold">{{ val }}</span></p>
+                {% empty %}
+                <p class="small text-muted mb-1">Sin campos personalizados</p>
+                {% endfor %}
+                
+                {% if metodo.instrucciones %}
+                <p class="small text-muted mb-0 mt-3 border-top pt-2">{{ metodo.instrucciones }}</p>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white border-top-0 d-flex justify-content-between">
+                <div>
+                    {% if metodo.activo %}
+                    <span class="badge bg-success">Activo</span>
+                    {% else %}
+                    <span class="badge bg-danger">Inactivo</span>
+                    {% endif %}
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#modalMetodoPago{{ metodo.id }}">
+                    <i class="bi bi-pencil"></i> Editar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar -->
+    <div class="modal fade" id="modalMetodoPago{{ metodo.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{% url 'guardar_metodo_pago' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="metodo_id" value="{{ metodo.id }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar Método de Pago</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nombre Comercial</label>
+                            <input type="text" name="nombre" class="form-control" value="{{ metodo.nombre }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Región / País</label>
+                            <input type="text" name="region" class="form-control" value="{{ metodo.region }}" required placeholder="Ej: Venezuela, Global, Colombia...">
+                        </div>
+                        
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-bold m-0">Campos Personalizables</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCampo('contenedorCampos{{ metodo.id }}')">
+                                <i class="bi bi-plus"></i> Agregar Campo
+                            </button>
+                        </div>
+                        <div id="contenedorCampos{{ metodo.id }}" class="mb-3">
+                            {% for key, val in metodo.campos_personalizados.items %}
+                            <div class="input-group mb-2 row-campo">
+                                <input type="text" name="campo_nombre[]" class="form-control" placeholder="Nombre (Ej: Titular)" value="{{ key }}" required>
+                                <input type="text" name="campo_valor[]" class="form-control w-50" placeholder="Información" value="{{ val }}" required>
+                                <button type="button" class="btn btn-outline-danger" onclick="this.closest('.row-campo').remove()">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            {% empty %}
+                            <!-- Vacío, pueden agregarlos con el botón -->
+                            {% endfor %}
+                        </div>
+                        <hr>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Instrucciones</label>
+                            <textarea name="instrucciones" class="form-control" rows="2">{{ metodo.instrucciones|default:'' }}</textarea>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" name="activo" class="form-check-input" id="activo{{ metodo.id }}" {% if metodo.activo %}checked{% endif %}>
+                            <label class="form-check-label" for="activo{{ metodo.id }}">Activo (Visible para usuarios)</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Guardar Cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center text-muted py-5">
+        <p>No has registrado ningún método de pago.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal Crear -->
+<div class="modal fade" id="modalMetodoPago" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'guardar_metodo_pago' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Añadir Método de Pago</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre Comercial (Ej. Banesco, Binance, Zelle)</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Región / País</label>
+                        <input type="text" name="region" class="form-control" placeholder="Ej: Venezuela, Colombia, Global" required>
+                    </div>
+                    
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold m-0">Campos Personalizables</label>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCampo('contenedorCamposNuevo')">
+                            <i class="bi bi-plus"></i> Agregar Campo
+                        </button>
+                    </div>
+                    <div id="contenedorCamposNuevo" class="mb-3">
+                        <div class="input-group mb-2 row-campo">
+                            <input type="text" name="campo_nombre[]" class="form-control" placeholder="Nombre (Ej: Correo)" required>
+                            <input type="text" name="campo_valor[]" class="form-control w-50" placeholder="Información" required>
+                            <button type="button" class="btn btn-outline-danger" onclick="this.closest('.row-campo').remove()">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <hr>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Instrucciones</label>
+                        <textarea name="instrucciones" class="form-control" rows="2" placeholder="Ej. Por favor pon el nombre de tu finca en el concepto del pago."></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" name="activo" class="form-check-input" id="activoNuevo" checked>
+                        <label class="form-check-label" for="activoNuevo">Activo (Visible para usuarios)</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Añadir Método</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function addCampo(containerId) {
+        const container = document.getElementById(containerId);
+        const template = `
+            <div class="input-group mb-2 row-campo">
+                <input type="text" name="campo_nombre[]" class="form-control" placeholder="Nombre de campo (Ej: Titular)" required>
+                <input type="text" name="campo_valor[]" class="form-control w-50" placeholder="Información" required>
+                <button type="button" class="btn btn-outline-danger" onclick="this.closest('.row-campo').remove()">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', template);
+    }
+
+    function resetForm(modalId) {
+        // Opcional: Podríamos vaciar el contenedor al abrir, pero el template actual 
+        // tiene un campo por defecto para que sea intuitivo
+    }
+</script>
+{% endblock %}

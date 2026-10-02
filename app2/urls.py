@@ -14,6 +14,10 @@ urlpatterns = [
     path('guardar_plan_saas/', views.guardar_plan_saas, name='guardar_plan_saas'),
     path('eliminar_plan_saas/<int:plan_id>/', views.eliminar_plan_saas, name='eliminar_plan_saas'),
     path('registrar_pago_saas/', views.registrar_pago_saas, name='registrar_pago_saas'),
+    path('conciliacion/', views.admin_conciliacion, name='admin_conciliacion'),
+    path('procesar_conciliacion/', views.procesar_conciliacion, name='procesar_conciliacion'),
+    path('metodos_pago/', views.admin_metodos_pago, name='admin_metodos_pago'),
+    path('guardar_metodo_pago/', views.guardar_metodo_pago, name='guardar_metodo_pago'),
 
     # Veti IA
     path('veti/', views.admin_veti, name='admin_veti'),

@@ -64,7 +64,10 @@ def get_admin_base_context(request):
     if not admin_id:
         return None, None
         
-    admin_user = User_admin.objects.get(id=admin_id)
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
 
     # Inicializar planes por defecto si no existen
     if not PlanSaaS.objects.exists():
@@ -202,7 +205,10 @@ def toggle_bloqueo(request, user_id):
     admin_id = request.session.get('user_admin_id')
     if not admin_id:
         return redirect('login_admin')
-    admin_user = User_admin.objects.get(id=admin_id)
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
     
     try:
         user = App1User.objects.get(id=user_id)
@@ -220,7 +226,10 @@ def editar_suscripcion(request):
     admin_id = request.session.get('user_admin_id')
     if not admin_id:
         return redirect('login_admin')
-    admin_user = User_admin.objects.get(id=admin_id)
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
         
     if request.method == 'POST':
         user_id = request.POST.get('user_id')
@@ -228,7 +237,32 @@ def editar_suscripcion(request):
         estado = request.POST.get('estado')
         fecha_vencimiento = request.POST.get('fecha_vencimiento')
         
+        nombre_usuario = request.POST.get('nombre_usuario', '').strip()
+        email_usuario = request.POST.get('email_usuario', '').strip()
+        password_usuario = request.POST.get('password_usuario', '').strip()
+        bloqueado_usuario = request.POST.get('bloqueado_usuario') == 'on'
+        
         try:
+            # Update user configuration
+            user = App1User.objects.get(id=user_id)
+            user_changed = False
+            if nombre_usuario and nombre_usuario != user.nombre:
+                user.nombre = nombre_usuario
+                user_changed = True
+            if email_usuario != user.email:
+                user.email = email_usuario
+                user_changed = True
+            if password_usuario:
+                user.password = make_password(password_usuario)
+                user_changed = True
+            if user.bloqueado != bloqueado_usuario:
+                user.bloqueado = bloqueado_usuario
+                user_changed = True
+                
+            if user_changed:
+                user.save()
+                
+            # Update subscription
             suscripcion = Suscripcion.objects.get(usuario__id=user_id)
             suscripcion.plan = plan_codigo
             suscripcion.estado = estado
@@ -242,8 +276,8 @@ def editar_suscripcion(request):
                 suscripcion.fecha_vencimiento = fecha_vencimiento
             suscripcion.save()
 
-            registrar_log_admin(admin_user, 'FINANZAS', f"Actualizó suscripción de {suscripcion.usuario.nombre} a Plan {plan_codigo} ({estado})", request)
-            messages.success(request, f"Suscripción actualizada exitosamente.")
+            registrar_log_admin(admin_user, 'FINANZAS', f"Actualizó configuración/suscripción de {suscripcion.usuario.nombre} a Plan {plan_codigo} ({estado})", request)
+            messages.success(request, f"Configuración de {suscripcion.usuario.nombre} actualizada exitosamente.")
         except Suscripcion.DoesNotExist:
             messages.error(request, "Error al actualizar suscripción.")
             
@@ -253,13 +287,19 @@ def guardar_plan_saas(request):
     admin_id = request.session.get('user_admin_id')
     if not admin_id:
         return redirect('login_admin')
-    admin_user = User_admin.objects.get(id=admin_id)
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
 
     if request.method == 'POST':
         plan_id = request.POST.get('plan_id')
         codigo = request.POST.get('codigo', '').upper().strip()
         nombre = request.POST.get('nombre', '').strip()
         precio_mensual = request.POST.get('precio_mensual', 0)
+        descuento_3_meses = request.POST.get('descuento_3_meses', 0)
+        descuento_6_meses = request.POST.get('descuento_6_meses', 0)
+        descuento_12_meses = request.POST.get('descuento_12_meses', 0)
         badge = request.POST.get('badge', 'Popular').strip()
         descripcion = request.POST.get('descripcion', '').strip()
         caracteristicas_list = request.POST.get('caracteristicas_list', '').strip()
@@ -286,6 +326,9 @@ def guardar_plan_saas(request):
             plan.codigo = codigo
             plan.nombre = nombre
             plan.precio_mensual = precio_mensual
+            plan.descuento_3_meses = descuento_3_meses
+            plan.descuento_6_meses = descuento_6_meses
+            plan.descuento_12_meses = descuento_12_meses
             plan.badge = badge
             plan.descripcion = descripcion
             plan.caracteristicas_list = caracteristicas_list
@@ -315,6 +358,9 @@ def guardar_plan_saas(request):
                 codigo=codigo,
                 nombre=nombre,
                 precio_mensual=precio_mensual,
+                descuento_3_meses=descuento_3_meses,
+                descuento_6_meses=descuento_6_meses,
+                descuento_12_meses=descuento_12_meses,
                 badge=badge,
                 descripcion=descripcion,
                 caracteristicas_list=caracteristicas_list,
@@ -344,7 +390,10 @@ def eliminar_plan_saas(request, plan_id):
     admin_id = request.session.get('user_admin_id')
     if not admin_id:
         return redirect('login_admin')
-    admin_user = User_admin.objects.get(id=admin_id)
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
 
     plan = get_object_or_404(PlanSaaS, id=plan_id)
     nombre_plan = plan.nombre
@@ -357,7 +406,10 @@ def registrar_pago_saas(request):
     admin_id = request.session.get('user_admin_id')
     if not admin_id:
         return redirect('login_admin')
-    admin_user = User_admin.objects.get(id=admin_id)
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
 
     if request.method == 'POST':
         suscripcion_id = request.POST.get('suscripcion_id')
@@ -401,7 +453,10 @@ def admin_veti(request):
     admin_id = request.session.get('user_admin_id')
     if not admin_id:
         return redirect('login_admin')
-    admin_user = User_admin.objects.get(id=admin_id)
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
     from .models import VetiConfig
     config = VetiConfig.get_config()
     return render(request, 'admin_veti.html', {
@@ -414,7 +469,10 @@ def guardar_veti_config(request):
     admin_id = request.session.get('user_admin_id')
     if not admin_id:
         return redirect('login_admin')
-    admin_user = User_admin.objects.get(id=admin_id)
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
 
     if request.method == 'POST':
         from .models import VetiConfig
@@ -437,3 +495,137 @@ def guardar_veti_config(request):
         messages.success(request, '✅ Configuración de Veti guardada correctamente.')
 
     return redirect('admin_veti')
+
+# ── Finanzas Avanzadas / Pagos ───────────────────────────────
+
+def admin_conciliacion(request):
+    admin_id = request.session.get('user_admin_id')
+    if not admin_id:
+        return redirect('login_admin')
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
+    
+    pagos_pendientes = PagoSuscripcion.objects.filter(estado='PENDIENTE').select_related('suscripcion__usuario', 'metodo_pago').order_by('-fecha_pago')
+    
+    return render(request, 'admin_conciliacion.html', {
+        'admin_user': admin_user,
+        'pagos_pendientes': pagos_pendientes,
+        'current_tab': 'conciliacion'
+    })
+
+def procesar_conciliacion(request):
+    admin_id = request.session.get('user_admin_id')
+    if not admin_id:
+        return redirect('login_admin')
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
+    
+    if request.method == 'POST':
+        pago_id = request.POST.get('pago_id')
+        accion = request.POST.get('accion')
+        
+        try:
+            pago = PagoSuscripcion.objects.get(id=pago_id)
+            if accion == 'aprobar':
+                pago.estado = 'AL_DIA'
+                pago.registrado_por = admin_user
+                pago.save()
+                
+                # Actualizar suscripción
+                suscripcion = pago.suscripcion
+                suscripcion.estado = 'ACTIVA'
+                
+                # Calcular días a sumar basado en los meses pagados
+                dias_a_sumar = pago.meses_pagados * 30
+                
+                if suscripcion.fecha_vencimiento:
+                    suscripcion.fecha_vencimiento = suscripcion.fecha_vencimiento + datetime.timedelta(days=dias_a_sumar)
+                else:
+                    suscripcion.fecha_vencimiento = datetime.date.today() + datetime.timedelta(days=dias_a_sumar)
+                suscripcion.save()
+                
+                registrar_log_admin(admin_user, 'FINANZAS', f"Aprobó pago de ${pago.monto} de {suscripcion.usuario.nombre}", request)
+                messages.success(request, f"Pago aprobado. Suscripción de {suscripcion.usuario.nombre} renovada.")
+            elif accion == 'rechazar':
+                pago.estado = 'RECHAZADO'
+                pago.registrado_por = admin_user
+                pago.save()
+                registrar_log_admin(admin_user, 'FINANZAS', f"Rechazó pago de ${pago.monto} de {pago.suscripcion.usuario.nombre}", request)
+                messages.warning(request, "Pago rechazado correctamente.")
+        except PagoSuscripcion.DoesNotExist:
+            messages.error(request, "Pago no encontrado.")
+            
+    return redirect('admin_conciliacion')
+
+def admin_metodos_pago(request):
+    admin_id = request.session.get('user_admin_id')
+    if not admin_id:
+        return redirect('login_admin')
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
+    
+    from .models import MetodoPago
+    metodos = MetodoPago.objects.all().order_by('-activo', 'nombre')
+    
+    return render(request, 'admin_metodos_pago.html', {
+        'admin_user': admin_user,
+        'metodos': metodos,
+        'current_tab': 'metodos_pago'
+    })
+
+def guardar_metodo_pago(request):
+    admin_id = request.session.get('user_admin_id')
+    if not admin_id:
+        return redirect('login_admin')
+    admin_user = User_admin.objects.filter(id=admin_id).first()
+    if not admin_user:
+        request.session.pop('user_admin_id', None)
+        return redirect('login_admin')
+    
+    if request.method == 'POST':
+        from .models import MetodoPago
+        metodo_id = request.POST.get('metodo_id')
+        nombre = request.POST.get('nombre', '').strip()
+        region = request.POST.get('region', 'Global').strip()
+        instrucciones = request.POST.get('instrucciones', '').strip()
+        activo = 'activo' in request.POST
+        
+        # Procesar campos dinámicos
+        nombres = request.POST.getlist('campo_nombre[]')
+        valores = request.POST.getlist('campo_valor[]')
+        campos_personalizados = {}
+        for n, v in zip(nombres, valores):
+            if n.strip() and v.strip():
+                campos_personalizados[n.strip()] = v.strip()
+        
+        if metodo_id:
+            try:
+                metodo = MetodoPago.objects.get(id=metodo_id)
+                metodo.nombre = nombre
+                metodo.region = region
+                metodo.campos_personalizados = campos_personalizados
+                metodo.instrucciones = instrucciones
+                metodo.activo = activo
+                metodo.save()
+                registrar_log_admin(admin_user, 'FINANZAS', f"Actualizó método de pago: {nombre}", request)
+                messages.success(request, f"Método de pago '{nombre}' actualizado.")
+            except MetodoPago.DoesNotExist:
+                messages.error(request, "Método de pago no encontrado.")
+        else:
+            MetodoPago.objects.create(
+                nombre=nombre,
+                region=region,
+                campos_personalizados=campos_personalizados,
+                instrucciones=instrucciones,
+                activo=activo
+            )
+            registrar_log_admin(admin_user, 'FINANZAS', f"Creó método de pago: {nombre}", request)
+            messages.success(request, f"Método de pago '{nombre}' creado exitosamente.")
+            
+    return redirect('admin_metodos_pago')

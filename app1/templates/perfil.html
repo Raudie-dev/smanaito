@@ -2,6 +2,61 @@
 {% block title %}Mi Perfil y Configuración{% endblock %}
 {% block section_title %}Mi Perfil y Configuración{% endblock %}
 
+{% block custom_css %}
+<style>
+    .payment-method-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .payment-method-card:hover {
+        border-color: #f3ba2f;
+        box-shadow: 0 4px 12px rgba(243, 186, 47, 0.15);
+    }
+    .payment-method-card.selected {
+        border-color: #f3ba2f;
+        background-color: #fffcf0;
+        box-shadow: 0 0 0 1px #f3ba2f;
+    }
+    .method-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    .method-icon.bank { background-color: #e3f2fd; color: #1976d2; }
+    .method-icon.zelle { background-color: #f3e5f5; color: #7b1fa2; }
+    .method-icon.binance { background-color: #fff8e1; color: #f3ba2f; }
+    .method-icon.other { background-color: #eeeeee; color: #616161; }
+    
+    .upload-zone {
+        border: 2px dashed #cfd8dc;
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        background-color: #fafafa;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+        border-color: #f3ba2f;
+        background-color: #fffcf0;
+    }
+    
+    .table-pagos th {
+        background-color: #f8f9fa;
+        color: #5f6368;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% if messages %}
@@ -29,6 +84,11 @@
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="tab-seguridad-btn" data-bs-toggle="pill" data-bs-target="#tab-seguridad" type="button" role="tab">
                 <i class="bi bi-shield-lock me-1"></i> Seguridad y Acceso
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-pagos-btn" data-bs-toggle="pill" data-bs-target="#tab-pagos" type="button" role="tab">
+                <i class="bi bi-wallet2 me-1"></i> Suscripción y Pagos
             </button>
         </li>
     </ul>
@@ -367,6 +427,158 @@
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════
+         PESTAÑA 4: SUSCRIPCIÓN Y PAGOS
+    ═══════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-pagos" role="tabpanel">
+        <div class="row">
+            <!-- Formulario de Pago (Izquierda) -->
+            <div class="col-lg-7 mb-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white border-0 pt-4 pb-0 px-4">
+                        <h5 class="fw-bold mb-0">Reportar un Pago</h5>
+                        <p class="text-muted small">Selecciona un método de pago y sube tu comprobante.</p>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <form method="POST" enctype="multipart/form-data" id="formPago">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="registrar_pago">
+                            
+                            <label class="form-label fw-bold mb-3">1. Selecciona el método de pago</label>
+                            <div class="row g-3 mb-4">
+                                {% for metodo in metodos %}
+                                <div class="col-md-6">
+                                    <div class="payment-method-card p-3 h-100" data-instrucciones="{{ metodo.instrucciones|escapejs }}" onclick="selectMethod(this, '{{ metodo.id }}')">
+                                        <div class="d-none dynamic-fields-data">
+                                            {% for k, v in metodo.campos_personalizados.items %}
+                                                <div data-key="{{ k }}" data-val="{{ v }}"></div>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="method-icon other me-3">
+                                                <i class="bi bi-wallet"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-0">{{ metodo.nombre }}</h6>
+                                                <small class="text-muted">{{ metodo.region }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="col-12 text-center text-muted py-3">
+                                    No hay métodos de pago disponibles en este momento.
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- Info del Método Seleccionado -->
+                            <div id="methodInfo" class="alert alert-secondary d-none mb-4 border-0">
+                                <h6 class="fw-bold mb-2 text-dark"><i class="bi bi-info-circle me-1"></i> Información de Pago</h6>
+                                <div id="dynamicInfoFields"></div>
+                                <p class="mb-0 text-muted small mt-2" id="infoInstrucciones"></p>
+                            </div>
+
+                            <input type="hidden" name="metodo_id" id="metodo_id_input" required>
+
+                            <label class="form-label fw-bold mb-2">2. Detalles del Pago</label>
+                            <div class="row mb-4">
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <label class="form-label small text-muted">Período a Pagar</label>
+                                    <select name="meses_pagados" id="mesesPagadosSelect" class="form-select" onchange="calcularMontoPago()">
+                                        <option value="1">1 Mes</option>
+                                        <option value="3">3 Meses {% if suscripcion.plan_obj.descuento_3_meses > 0 %}(-{{ suscripcion.plan_obj.descuento_3_meses }}%){% endif %}</option>
+                                        <option value="6">6 Meses {% if suscripcion.plan_obj.descuento_6_meses > 0 %}(-{{ suscripcion.plan_obj.descuento_6_meses }}%){% endif %}</option>
+                                        <option value="12">1 Año {% if suscripcion.plan_obj.descuento_12_meses > 0 %}(-{{ suscripcion.plan_obj.descuento_12_meses }}%){% endif %}</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">Monto a Pagar ($)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white">$</span>
+                                        <input type="number" step="0.01" name="monto" id="montoPagoInput" class="form-control" placeholder="0.00" value="{{ suscripcion.plan_obj.precio_mensual|default:'0'|stringformat:'f' }}" readonly required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <label class="form-label fw-bold mb-2">3. Sube el Comprobante (Captura de pantalla)</label>
+                            <div class="upload-zone mb-4" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                                <i class="bi bi-cloud-arrow-up display-4 text-muted mb-2"></i>
+                                <h6 class="fw-bold text-dark">Haz clic para subir imagen</h6>
+                                <p class="text-muted small mb-0">o arrastra y suelta aquí (JPG, PNG)</p>
+                                <input type="file" name="comprobante" id="fileInput" class="d-none" accept="image/*" required onchange="previewFile()">
+                                <div id="filePreview" class="mt-3 d-none">
+                                    <img id="previewImg" src="" alt="Vista previa" class="img-fluid rounded shadow-sm" style="max-height: 150px;">
+                                    <p class="text-success small fw-bold mt-2 mb-0"><i class="bi bi-check-circle"></i> Archivo seleccionado</p>
+                                </div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-warning fw-bold py-2" id="btnSubmit" disabled>
+                                    Enviar Comprobante para Revisión
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial de Pagos (Derecha) -->
+            <div class="col-lg-5 mb-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white border-0 pt-4 pb-2 px-4">
+                        <h5 class="fw-bold mb-0">Historial de Pagos</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-pagos table-hover align-middle mb-0">
+                                <tbody>
+                                    {% for pago in pagos %}
+                                    <tr>
+                                        <td class="px-4 py-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    {% if pago.estado == 'AL_DIA' %}
+                                                        <i class="bi bi-check-circle-fill text-success fs-4"></i>
+                                                    {% elif pago.estado == 'PENDIENTE' %}
+                                                        <i class="bi bi-clock-fill text-warning fs-4"></i>
+                                                    {% else %}
+                                                        <i class="bi bi-x-circle-fill text-danger fs-4"></i>
+                                                    {% endif %}
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold">${{ pago.monto }}</h6>
+                                                    <small class="text-muted">{{ pago.fecha_pago|date:"d M Y" }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="d-block small text-muted">Método</span>
+                                            <span class="fw-semibold small">{{ pago.metodo_pago.nombre|default:"-" }}</span>
+                                        </td>
+                                        <td class="px-4 text-end">
+                                            <span class="badge {% if pago.estado == 'AL_DIA' %}bg-success{% elif pago.estado == 'PENDIENTE' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                                {{ pago.get_estado_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center py-5 text-muted">
+                                            <i class="bi bi-receipt display-4 d-block mb-3 opacity-25"></i>
+                                            No hay pagos registrados
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div><!-- /.tab-content -->
 
 
@@ -383,6 +595,63 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('shown.bs.tab', () => localStorage.setItem(TAB_KEY, btn.dataset.bsTarget));
     });
 });
+
+// Selección y vista previa de pago
+function selectMethod(cardElement, id) {
+    document.querySelectorAll('.payment-method-card').forEach(card => card.classList.remove('selected'));
+    cardElement.classList.add('selected');
+    document.getElementById('metodo_id_input').value = id;
+    
+    const infoContainer = document.getElementById('dynamicInfoFields');
+    infoContainer.innerHTML = '';
+    
+    cardElement.querySelectorAll('.dynamic-fields-data div').forEach(div => {
+        const k = div.getAttribute('data-key');
+        const v = div.getAttribute('data-val');
+        infoContainer.innerHTML += `<p class="mb-1 text-dark small"><strong>${k}:</strong> <span class="text-primary fw-bold user-select-all">${v}</span></p>`;
+    });
+    
+    const instrucciones = cardElement.getAttribute('data-instrucciones');
+    if(instrucciones) { 
+        document.getElementById('infoInstrucciones').textContent = instrucciones; 
+    } else { 
+        document.getElementById('infoInstrucciones').textContent = ""; 
+    }
+    
+    document.getElementById('methodInfo').classList.remove('d-none');
+    checkFormValidity();
+}
+function previewFile() {
+    const file = document.getElementById('fileInput').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('previewImg').src = e.target.result;
+            document.getElementById('filePreview').classList.remove('d-none');
+        }
+        reader.readAsDataURL(file);
+    }
+    checkFormValidity();
+}
+function checkFormValidity() {
+    const hasMethod = document.getElementById('metodo_id_input').value !== "";
+    const hasFile = document.getElementById('fileInput') && document.getElementById('fileInput').files.length > 0;
+    if(hasMethod && hasFile) { document.getElementById('btnSubmit').disabled = false; } else { document.getElementById('btnSubmit').disabled = true; }
+}
+
+const dropZone = document.getElementById('uploadZone');
+if (dropZone) {
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            document.getElementById('fileInput').files = e.dataTransfer.files;
+            previewFile();
+        }
+    });
+}
 
 // Biometría WebAuthn
 if (window.PublicKeyCredential && window.isSecureContext) {
@@ -426,6 +695,25 @@ if (window.PublicKeyCredential && window.isSecureContext) {
             if (err.name !== 'NotAllowedError') alert('Error: ' + (err.message || 'desconocido'));
         }
     });
+}
+
+// Cálculo de Descuentos
+const PRECIO_BASE = parseFloat("{{ suscripcion.plan_obj.precio_mensual|default:'0' }}".replace(',', '.'));
+const DCTO_3_MESES = parseFloat("{{ suscripcion.plan_obj.descuento_3_meses|default:'0' }}");
+const DCTO_6_MESES = parseFloat("{{ suscripcion.plan_obj.descuento_6_meses|default:'0' }}");
+const DCTO_12_MESES = parseFloat("{{ suscripcion.plan_obj.descuento_12_meses|default:'0' }}");
+
+function calcularMontoPago() {
+    const meses = parseInt(document.getElementById('mesesPagadosSelect').value);
+    let subtotal = PRECIO_BASE * meses;
+    let descuento = 0;
+
+    if (meses === 3) descuento = DCTO_3_MESES;
+    else if (meses === 6) descuento = DCTO_6_MESES;
+    else if (meses === 12) descuento = DCTO_12_MESES;
+
+    let total = subtotal - (subtotal * (descuento / 100));
+    document.getElementById('montoPagoInput').value = total.toFixed(2);
 }
 </script>
 

@@ -13,6 +13,31 @@ import urllib.error
 from .models import User, Finca, Animal, Rebaño, ConfiguracionUsuario, VentaAnimal, PlanVacunacion, IncidenteSanitario, GastoFinca, GastoRecurrente, LiquidacionLeche, PrecioLecheConfig, LogActividad, Corral, PesajeAnimal, RegistroAlimentacion, TareaDiaria, HistorialTransferencia, ProtocoloTratamiento, ProtocoloAlimentacion, LecturaComedero, OrdenCargaMixer, ServicioReproductivo, DiagnosticoGestacion, RegistroParto, Potrero, RotacionPotrero, ArticuloInventario, MovimientoInventario, CatalogoSemen, Empleado, PagoNomina, WebAuthnCredential, RegistroOrdeno
 
 from django.core.paginator import Paginator
+from functools import wraps
+
+def requiere_modulo(modulo_name):
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            user_id = request.session.get('user')
+            if not user_id:
+                messages.error(request, 'Debe iniciar sesión primero')
+                return redirect('login')
+            
+            try:
+                user = User.objects.get(id=user_id)
+                suscripcion = getattr(user, 'suscripcion_saas', None)
+                if suscripcion and suscripcion.plan_obj:
+                    plan = suscripcion.plan_obj
+                    if not getattr(plan, modulo_name, True):
+                        messages.error(request, 'Tu plan actual no incluye este módulo. Actualiza tu plan para acceder.')
+                        return redirect('control')
+            except User.DoesNotExist:
+                pass
+
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator
 
 def registrar_log(usuario, finca_id, accion, modulo, descripcion):
     try:
@@ -556,6 +581,7 @@ def rebano(request):
 
 
 
+@requiere_modulo('mod_crianza')
 def crianza(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -809,6 +835,7 @@ def datos_animales(request):
     return render(request, 'datos_animales.html', context)
 
 
+@requiere_modulo('mod_vacunacion')
 def vacunacion(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -895,6 +922,7 @@ def vacunacion(request):
     return render(request, 'vacunacion.html', context)
 
 
+@requiere_modulo('mod_incidentes')
 def incidentes(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -1208,6 +1236,7 @@ def exportar_reporte_excel(request):
     wb.save(response)
     return response
 
+@requiere_modulo('mod_finanzas')
 def finanzas(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -1367,6 +1396,7 @@ def finanzas(request):
     }
     return render(request, 'finanzas.html', context)
 
+@requiere_modulo('mod_auditoria')
 def auditoria(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -1511,9 +1541,47 @@ def perfil(request):
             registrar_log(user, finca_activa_id, 'CONFIGURACION', 'SEGURIDAD', "Modificó las preferencias de visualización y notificaciones")
             messages.success(request, 'Preferencias guardadas correctamente')
 
+        elif action == 'registrar_pago':
+            metodo_id = request.POST.get('metodo_id')
+            monto = request.POST.get('monto')
+            meses_pagados = request.POST.get('meses_pagados', 1)
+            comprobante = request.FILES.get('comprobante')
+            
+            if not metodo_id or not monto or not comprobante:
+                messages.error(request, "Todos los campos son obligatorios y debe anexar el comprobante.")
+            else:
+                from app2.models import MetodoPago, PagoSuscripcion
+                try:
+                    metodo = MetodoPago.objects.get(id=metodo_id)
+                    meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+                    hoy = datetime.date.today()
+                    periodo = f"{meses[hoy.month-1]} {hoy.year}"
+                    
+                    PagoSuscripcion.objects.create(
+                        suscripcion=suscripcion,
+                        monto=monto,
+                        meses_pagados=meses_pagados,
+                        fecha_pago=hoy,
+                        periodo_correspondiente=periodo,
+                        estado='PENDIENTE',
+                        metodo_pago=metodo,
+                        comprobante=comprobante
+                    )
+                    registrar_log(user, finca_activa_id, 'CREACION', 'FINANZAS', f'Subió un comprobante de pago por ${monto} vía {metodo.nombre}')
+                    messages.success(request, "Tu comprobante de pago ha sido enviado y está en revisión.")
+                except Exception as e:
+                    messages.error(request, f"Error al procesar el pago: {e}")
+
         return redirect('perfil')
 
     webauthn_creds = WebAuthnCredential.objects.filter(user=user)
+    
+    from app2.models import MetodoPago, PagoSuscripcion
+    metodos = MetodoPago.objects.filter(activo=True)
+    pagos = []
+    if suscripcion:
+        pagos = PagoSuscripcion.objects.filter(suscripcion=suscripcion).order_by('-fecha_pago')
+
     context = {
         'fincas_usuario': fincas_usuario,
         'todas_las_fincas': todas_las_fincas,
@@ -1524,6 +1592,8 @@ def perfil(request):
         'puede_crear_finca': puede_crear_finca,
         'limite_fincas_plan': limite_fincas,
         'fincas_count': fincas_count,
+        'metodos': metodos,
+        'pagos': pagos,
     }
     return render(request, 'perfil.html', context)
 
@@ -1641,6 +1711,7 @@ def api_webauthn_delete(request, cred_id):
         messages.error(request, 'Huella no encontrada')
     return redirect('perfil')
 
+@requiere_modulo('mod_engorde')
 def engorde(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -2019,6 +2090,7 @@ def manga_manejo(request):
     }
     return render(request, 'manga.html', context)
 
+@requiere_modulo('mod_estructura_costos')
 def estructura_costos(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -2174,6 +2246,7 @@ def estructura_costos(request):
     }
     return render(request, 'estructura_costos.html', context)
 
+@requiere_modulo('mod_reproduccion')
 def reproduccion(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -2263,6 +2336,7 @@ def reproduccion(request):
     }
     return render(request, 'reproduccion.html', context)
 
+@requiere_modulo('mod_potreros')
 def potreros(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -2331,6 +2405,7 @@ def potreros(request):
     }
     return render(request, 'potreros.html', context)
 
+@requiere_modulo('mod_inventario')
 def inventario(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -2404,6 +2479,7 @@ def inventario(request):
     }
     return render(request, 'inventario.html', context)
 
+@requiere_modulo('mod_empleados')
 def empleados(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -2444,6 +2520,7 @@ def empleados(request):
     }
     return render(request, 'empleados.html', context)
 
+@requiere_modulo('mod_genetica')
 def genetica(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -2522,6 +2599,7 @@ def hoja_vida(request, animal_id):
     }
     return render(request, 'hoja_vida.html', context)
 
+@requiere_modulo('mod_ordeno')
 def ordeno(request):
     user_id = request.session.get('user')
     if not user_id:
@@ -2970,3 +3048,5 @@ Formato estricto:
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
+
+

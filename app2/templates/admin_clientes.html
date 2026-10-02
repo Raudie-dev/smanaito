@@ -3,6 +3,36 @@
 {% block title %}Clientes (SaaS) | Samanito Master Admin{% endblock %}
 
 {% block admin_content %}
+<!-- Barra de Filtros Separada -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 bg-white">
+            <div class="card-body p-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-funnel text-muted"></i>
+                    <span class="fw-bold text-dark small me-2">Filtros:</span>
+                    <select id="filtroPlan" class="form-select form-select-sm" style="width: 160px;">
+                        <option value="">Todos los Planes</option>
+                        {% for p in planes %}
+                        <option value="{{ p.codigo }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="filtroEstado" class="form-select form-select-sm" style="width: 160px;">
+                        <option value="">Cualquier Estado</option>
+                        <option value="Activa">Activa</option>
+                        <option value="Vencida">Vencida</option>
+                        <option value="Suspendida">Suspendida</option>
+                    </select>
+                </div>
+                <div class="input-group input-group-sm" style="width: 300px;">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorClientes" class="form-control border-start-0 bg-light" placeholder="Buscar por nombre o correo...">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-people-fill me-2 text-primary"></i>Gestión de Clientes (Fincas Ganaderas)</h6>
@@ -10,7 +40,7 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0" id="tablaClientes">
                 <thead class="table-light small text-uppercase">
                     <tr>
                         <th>ID</th>
@@ -70,4 +100,47 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const buscadorClientes = document.getElementById('buscadorClientes');
+    const filtroPlan = document.getElementById('filtroPlan');
+    const filtroEstado = document.getElementById('filtroEstado');
+
+    function filterTable() {
+        const query = (buscadorClientes ? buscadorClientes.value : '').toLowerCase().trim();
+        const planFilter = (filtroPlan ? filtroPlan.value : '').toLowerCase();
+        const estadoFilter = (filtroEstado ? filtroEstado.value : '').toLowerCase();
+
+        const tableRows = document.querySelectorAll('#tablaClientes tbody tr');
+
+        tableRows.forEach(row => {
+            if(row.children.length === 1 && row.children[0].colSpan > 1) return; // Skip empty message
+            
+            const textContent = row.textContent.toLowerCase();
+            const planText = row.children[4] ? row.children[4].textContent.toLowerCase() : '';
+            const estadoText = row.children[5] ? row.children[5].textContent.toLowerCase() : '';
+
+            let match = true;
+
+            if (query && !textContent.includes(query)) match = false;
+            if (planFilter && !planText.includes(planFilter)) match = false;
+            
+            if (estadoFilter) {
+                if (estadoFilter === 'activa' && !estadoText.includes('activa')) match = false;
+                if (estadoFilter === 'vencida' && !estadoText.includes('vencida') && !estadoText.includes('debe')) match = false;
+                if (estadoFilter === 'suspendida' && !estadoText.includes('suspendida')) match = false;
+            }
+
+            row.style.display = match ? '' : 'none';
+        });
+    }
+
+    if (buscadorClientes) buscadorClientes.addEventListener('input', filterTable);
+    if (filtroPlan) filtroPlan.addEventListener('change', filterTable);
+    if (filtroEstado) filtroEstado.addEventListener('change', filterTable);
+});
+</script>
 {% endblock %}

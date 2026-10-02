@@ -738,7 +738,7 @@
 <div id="veti-wrapper">
 
   <!-- ══════════ SIDEBAR HISTORIAL ══════════ -->
-  <div id="veti-sidebar">
+  <div id="veti-sidebar" class="hidden">
 
     <!-- Header -->
     <div class="cs-sidebar-header">
@@ -1388,5 +1388,11 @@ newConvBtn.addEventListener('click', function() {
 loadConvs();
 activeConvId = Date.now().toString();
 renderConvList();
+if (window.innerWidth > 768) {
+  openSidebar();
+} else {
+  // Aseguramos que el estado visual del toggle esté correcto si está oculto
+  toggleOpen.style.display = 'flex';
+}
 </script>
 {% endblock %}

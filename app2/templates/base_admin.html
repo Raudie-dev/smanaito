@@ -15,6 +15,51 @@
     
     <!-- Custom Dashboard Styles -->
     <link rel="stylesheet" href="{% static 'css/paneles-style.css' %}?v={% now 'U' %}">
+    <style>
+    .checkbox-card input[type="checkbox"] {
+        display: none;
+    }
+    .checkbox-card label {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        background-color: #f8f9fa;
+        color: #495057;
+        height: 100%;
+        margin: 0;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .checkbox-card label:hover {
+        border-color: #adb5bd;
+        background-color: #e9ecef;
+    }
+    .checkbox-card input[type="checkbox"]:checked + label {
+        border-color: #900c3f;
+        background-color: #fff0f3;
+        color: #900c3f;
+    }
+    .checkbox-card input[type="checkbox"]:checked + label .bi-square {
+        display: none;
+    }
+    .checkbox-card input[type="checkbox"]:checked + label .bi-check-square-fill {
+        display: inline-block !important;
+    }
+    .checkbox-card input[type="checkbox"]:not(:checked) + label .bi-check-square-fill {
+        display: none !important;
+    }
+    .checkbox-card input[type="checkbox"]:not(:checked) + label .bi-square {
+        display: inline-block !important;
+    }
+    
+    .checkbox-card-primary label {
+        padding: 15px;
+    }
+    </style>
 </head>
 <body>
 
@@ -41,6 +86,16 @@
             <li class="nav-item">
                 <a href="{% url 'admin_finanzas' %}" class="nav-link w-100 text-start {% if current_tab == 'finanzas' %}active{% endif %}">
                     <i class="bi bi-cash-stack me-2"></i> Finanzas & Pagos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'admin_conciliacion' %}" class="nav-link w-100 text-start {% if current_tab == 'conciliacion' %}active{% endif %}">
+                    <i class="bi bi-check2-circle me-2"></i> Conciliación de Pagos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'admin_metodos_pago' %}" class="nav-link w-100 text-start {% if current_tab == 'metodos_pago' %}active{% endif %}">
+                    <i class="bi bi-wallet2 me-2"></i> Métodos de Pago
                 </a>
             </li>
             <li class="nav-item">
@@ -107,48 +162,7 @@
                 {% endfor %}
             {% endif %}
 
-            <!-- Top Financial & Client Metric Cards -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-6 col-xl-3">
-                    <div class="card shadow-sm border-0 border-start border-4 border-success">
-                        <div class="card-body p-3">
-                            <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Estimado MRR Mensual</small>
-                            <h3 class="fw-bold mb-0 text-success">${{ mrr_estimado|floatformat:2 }}</h3>
-                            <p class="text-muted small mb-0"><i class="bi bi-arrow-up-right text-success me-1"></i>Ingreso Recurrente SaaS</p>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="col-md-6 col-xl-3">
-                    <div class="card shadow-sm border-0 border-start border-4 border-primary">
-                        <div class="card-body p-3">
-                            <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Clientes Activos (Al Día)</small>
-                            <h3 class="fw-bold mb-0 text-primary">{{ clientes_al_dia }}</h3>
-                            <p class="text-muted small mb-0">De {{ total_clientes }} usuarios en total</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-xl-3">
-                    <div class="card shadow-sm border-0 border-start border-4 border-danger">
-                        <div class="card-body p-3">
-                            <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Deudores / Vencidos</small>
-                            <h3 class="fw-bold mb-0 text-danger">{{ clientes_deudores }}</h3>
-                            <p class="text-muted small mb-0">Requieren renovación o cobro</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-xl-3">
-                    <div class="card shadow-sm border-0 border-start border-4 border-warning">
-                        <div class="card-body p-3">
-                            <small class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem;">Usuarios en Prueba (Trial)</small>
-                            <h3 class="fw-bold mb-0 text-dark">{{ clientes_trial }}</h3>
-                            <p class="text-muted small mb-0">Prueba gratuita 15 días</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Page Content Block -->
             {% block admin_content %}{% endblock %}
@@ -172,6 +186,29 @@
                     {% csrf_token %}
                     <input type="hidden" name="user_id" value="{{ cliente.id }}">
                     <div class="modal-body">
+                        <!-- Configuración de Usuario -->
+                        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Configuración de Usuario</h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Nombre del Cliente</label>
+                            <input type="text" name="nombre_usuario" class="form-control" value="{{ cliente.nombre }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Correo Electrónico</label>
+                            <input type="email" name="email_usuario" class="form-control" value="{{ cliente.email|default:'' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Cambiar Contraseña (Opcional)</label>
+                            <input type="password" name="password_usuario" class="form-control" placeholder="Dejar en blanco para no cambiar">
+                        </div>
+                        <div class="mb-3 form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="bloqueado_usuario" id="bloqueado_{{ cliente.id }}" {% if cliente.bloqueado %}checked{% endif %}>
+                            <label class="form-check-label text-muted small fw-bold" for="bloqueado_{{ cliente.id }}">Bloquear Acceso al Sistema</label>
+                        </div>
+                        
+                        <!-- Configuración de Suscripción -->
+                        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 mt-4">Configuración de Suscripción</h6>
+                        
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">Plan SaaS</label>
                             <select name="plan" class="form-select">
@@ -208,7 +245,7 @@
     {% if planes %}
     {% for p in planes %}
     <div class="modal fade" id="modalEditarPlan{{ p.id }}" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title fw-bold">Editar Plan: {{ p.nombre }}</h5>
@@ -226,6 +263,20 @@
                             <div class="col-md-6">
                                 <label class="form-label text-muted small fw-bold">Precio Mensual ($)</label>
                                 <input type="number" step="0.01" name="precio_mensual" class="form-control" value="{{ p.precio_mensual }}" required>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-bold">Dcto 3 Meses (%)</label>
+                                <input type="number" name="descuento_3_meses" class="form-control" value="{{ p.descuento_3_meses }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-bold">Dcto 6 Meses (%)</label>
+                                <input type="number" name="descuento_6_meses" class="form-control" value="{{ p.descuento_6_meses }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-bold">Dcto 12 Meses (%)</label>
+                                <input type="number" name="descuento_12_meses" class="form-control" value="{{ p.descuento_12_meses }}" required>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -254,34 +305,86 @@
                                 <input type="number" name="limite_animales" class="form-control" value="{{ p.limite_animales }}" required>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Módulos Permitidos</label>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_reproduccion" id="e_mod_reproduccion{{ p.id }}" {% if p.mod_reproduccion %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_reproduccion{{ p.id }}">Reproducción</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_genetica" id="e_mod_genetica{{ p.id }}" {% if p.mod_genetica %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_genetica{{ p.id }}">Genética</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_engorde" id="e_mod_engorde{{ p.id }}" {% if p.mod_engorde %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_engorde{{ p.id }}">Engorde</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_crianza" id="e_mod_crianza{{ p.id }}" {% if p.mod_crianza %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_crianza{{ p.id }}">Crianza</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_potreros" id="e_mod_potreros{{ p.id }}" {% if p.mod_potreros %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_potreros{{ p.id }}">Potreros</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_vacunacion" id="e_mod_vacunacion{{ p.id }}" {% if p.mod_vacunacion %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_vacunacion{{ p.id }}">Vacunación</label></div>
+                        <div class="row mb-3 g-3">
+                            <div class="col-md-6">
+                                <div class="checkbox-card checkbox-card-primary h-100">
+                                    <input type="checkbox" name="activo" id="activo{{ p.id }}" {% if p.activo %}checked{% endif %}>
+                                    <label for="activo{{ p.id }}">
+                                        <i class="bi bi-square text-muted me-2 fs-5"></i>
+                                        <i class="bi bi-check-square-fill me-2 fs-5 d-none"></i>
+                                        <div>
+                                            <div class="fw-bold mb-1">Plan Habilitado / Activo</div>
+                                            <div class="text-muted small fw-normal">Permite ser contratado o asignado</div>
+                                        </div>
+                                    </label>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_incidentes" id="e_mod_incidentes{{ p.id }}" {% if p.mod_incidentes %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_incidentes{{ p.id }}">Incidentes</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_empleados" id="e_mod_empleados{{ p.id }}" {% if p.mod_empleados %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_empleados{{ p.id }}">Empleados</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_inventario" id="e_mod_inventario{{ p.id }}" {% if p.mod_inventario %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_inventario{{ p.id }}">Inventario</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_finanzas" id="e_mod_finanzas{{ p.id }}" {% if p.mod_finanzas %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_finanzas{{ p.id }}">Finanzas</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_estructura_costos" id="e_mod_estructura_costos{{ p.id }}" {% if p.mod_estructura_costos %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_estructura_costos{{ p.id }}">Estructura Costos</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_auditoria" id="e_mod_auditoria{{ p.id }}" {% if p.mod_auditoria %}checked{% endif %}><label class="form-check-label text-dark small" for="e_mod_auditoria{{ p.id }}">Auditoría</label></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="checkbox-card checkbox-card-primary h-100">
+                                    <input type="checkbox" name="destacado" id="destacado{{ p.id }}" {% if p.destacado %}checked{% endif %}>
+                                    <label for="destacado{{ p.id }}">
+                                        <i class="bi bi-square text-muted me-2 fs-5"></i>
+                                        <i class="bi bi-check-square-fill me-2 fs-5 d-none"></i>
+                                        <div>
+                                            <div class="fw-bold mb-1">Destacar en Landing Page</div>
+                                            <div class="text-muted small fw-normal">Resalta la tarjeta públicamente</div>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="activo" id="activo{{ p.id }}" {% if p.activo %}checked{% endif %}>
-                            <label class="form-check-label text-dark fw-semibold" for="activo{{ p.id }}">Mostrar este plan en la Landing Page</label>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="destacado" id="destacado{{ p.id }}" {% if p.destacado %}checked{% endif %}>
-                            <label class="form-check-label text-dark fw-semibold" for="destacado{{ p.id }}">Destacar tarjeta en la Landing Page</label>
+
+                        <div class="mb-3">
+                            <label class="form-label text-dark fw-bold mb-3">Módulos Incluidos:</label>
+                            
+                            <h6 class="text-muted small fw-bold mb-2 text-uppercase d-flex justify-content-between align-items-center">
+                                <span>Ganadería y Producción</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input select-all-section" type="checkbox" checked title="Activar/Desactivar sección">
+                                </div>
+                            </h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_reproduccion" id="e_mod_reproduccion{{ p.id }}" {% if p.mod_reproduccion %}checked{% endif %}><label for="e_mod_reproduccion{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Reproducción</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_genetica" id="e_mod_genetica{{ p.id }}" {% if p.mod_genetica %}checked{% endif %}><label for="e_mod_genetica{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Genética</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_engorde" id="e_mod_engorde{{ p.id }}" {% if p.mod_engorde %}checked{% endif %}><label for="e_mod_engorde{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Engorde</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_crianza" id="e_mod_crianza{{ p.id }}" {% if p.mod_crianza %}checked{% endif %}><label for="e_mod_crianza{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Crianza</label></div></div>
+                            </div>
+
+                            <h6 class="text-muted small fw-bold mb-2 text-uppercase d-flex justify-content-between align-items-center">
+                                <span>Sanidad y Finca</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input select-all-section" type="checkbox" checked title="Activar/Desactivar sección">
+                                </div>
+                            </h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_vacunacion" id="e_mod_vacunacion{{ p.id }}" {% if p.mod_vacunacion %}checked{% endif %}><label for="e_mod_vacunacion{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Vacunación</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_incidentes" id="e_mod_incidentes{{ p.id }}" {% if p.mod_incidentes %}checked{% endif %}><label for="e_mod_incidentes{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Incidentes</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_potreros" id="e_mod_potreros{{ p.id }}" {% if p.mod_potreros %}checked{% endif %}><label for="e_mod_potreros{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Potreros</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_empleados" id="e_mod_empleados{{ p.id }}" {% if p.mod_empleados %}checked{% endif %}><label for="e_mod_empleados{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Empleados</label></div></div>
+                            </div>
+
+                            <h6 class="text-muted small fw-bold mb-2 text-uppercase d-flex justify-content-between align-items-center">
+                                <span>Administración</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input select-all-section" type="checkbox" checked title="Activar/Desactivar sección">
+                                </div>
+                            </h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_inventario" id="e_mod_inventario{{ p.id }}" {% if p.mod_inventario %}checked{% endif %}><label for="e_mod_inventario{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Inventario</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_finanzas" id="e_mod_finanzas{{ p.id }}" {% if p.mod_finanzas %}checked{% endif %}><label for="e_mod_finanzas{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Finanzas</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_estructura_costos" id="e_mod_estructura_costos{{ p.id }}" {% if p.mod_estructura_costos %}checked{% endif %}><label for="e_mod_estructura_costos{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Est. Costos</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_auditoria" id="e_mod_auditoria{{ p.id }}" {% if p.mod_auditoria %}checked{% endif %}><label for="e_mod_auditoria{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Auditoría</label></div></div>
+                            </div>
+
+                            <h6 class="text-muted small fw-bold mb-2 text-uppercase d-flex justify-content-between align-items-center">
+                                <span>Inteligencia Artificial</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input select-all-section" type="checkbox" checked title="Activar/Desactivar sección">
+                                </div>
+                            </h6>
+                            <div class="row g-2">
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_chat_ia" id="e_mod_chat_ia{{ p.id }}" {% if p.mod_chat_ia %}checked{% endif %}><label for="e_mod_chat_ia{{ p.id }}"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Asistente IA (Veti)</label></div></div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer d-flex justify-content-between">
@@ -359,7 +462,7 @@
 
     <!-- Modal Crear Plan -->
     <div class="modal fade" id="modalCrearPlan" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title fw-bold">Crear Nuevo Plan SaaS</h5>
@@ -376,6 +479,20 @@
                             <div class="col-md-6">
                                 <label class="form-label text-muted small fw-bold">Precio Mensual ($)</label>
                                 <input type="number" step="0.01" name="precio_mensual" class="form-control" placeholder="49.00" required>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-bold">Dcto 3 Meses (%)</label>
+                                <input type="number" name="descuento_3_meses" class="form-control" value="0" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-bold">Dcto 6 Meses (%)</label>
+                                <input type="number" name="descuento_6_meses" class="form-control" value="0" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-bold">Dcto 12 Meses (%)</label>
+                                <input type="number" name="descuento_12_meses" class="form-control" value="0" required>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -404,34 +521,86 @@
                                 <input type="number" name="limite_animales" class="form-control" value="100" required>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted small fw-bold">Módulos Permitidos</label>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_reproduccion" id="c_mod_reproduccion" checked><label class="form-check-label text-dark small" for="c_mod_reproduccion">Reproducción</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_genetica" id="c_mod_genetica" checked><label class="form-check-label text-dark small" for="c_mod_genetica">Genética</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_engorde" id="c_mod_engorde" checked><label class="form-check-label text-dark small" for="c_mod_engorde">Engorde</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_crianza" id="c_mod_crianza" checked><label class="form-check-label text-dark small" for="c_mod_crianza">Crianza</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_potreros" id="c_mod_potreros" checked><label class="form-check-label text-dark small" for="c_mod_potreros">Potreros</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_vacunacion" id="c_mod_vacunacion" checked><label class="form-check-label text-dark small" for="c_mod_vacunacion">Vacunación</label></div>
+                        <div class="row mb-3 g-3">
+                            <div class="col-md-6">
+                                <div class="checkbox-card checkbox-card-primary h-100">
+                                    <input type="checkbox" name="activo" id="activoNuevo" checked>
+                                    <label for="activoNuevo">
+                                        <i class="bi bi-square text-muted me-2 fs-5"></i>
+                                        <i class="bi bi-check-square-fill me-2 fs-5 d-none"></i>
+                                        <div>
+                                            <div class="fw-bold mb-1">Plan Habilitado / Activo</div>
+                                            <div class="text-muted small fw-normal">Permite ser contratado o asignado</div>
+                                        </div>
+                                    </label>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_incidentes" id="c_mod_incidentes" checked><label class="form-check-label text-dark small" for="c_mod_incidentes">Incidentes</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_empleados" id="c_mod_empleados" checked><label class="form-check-label text-dark small" for="c_mod_empleados">Empleados</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_inventario" id="c_mod_inventario" checked><label class="form-check-label text-dark small" for="c_mod_inventario">Inventario</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_finanzas" id="c_mod_finanzas" checked><label class="form-check-label text-dark small" for="c_mod_finanzas">Finanzas</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_estructura_costos" id="c_mod_estructura_costos" checked><label class="form-check-label text-dark small" for="c_mod_estructura_costos">Estructura Costos</label></div>
-                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="mod_auditoria" id="c_mod_auditoria" checked><label class="form-check-label text-dark small" for="c_mod_auditoria">Auditoría</label></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="checkbox-card checkbox-card-primary h-100">
+                                    <input type="checkbox" name="destacado" id="destacadoNuevo">
+                                    <label for="destacadoNuevo">
+                                        <i class="bi bi-square text-muted me-2 fs-5"></i>
+                                        <i class="bi bi-check-square-fill me-2 fs-5 d-none"></i>
+                                        <div>
+                                            <div class="fw-bold mb-1">Destacar en Landing Page</div>
+                                            <div class="text-muted small fw-normal">Resalta la tarjeta públicamente</div>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="activo" id="activoNuevo" checked>
-                            <label class="form-check-label text-dark fw-semibold" for="activoNuevo">Mostrar este plan en la Landing Page</label>
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="destacado" id="destacadoNuevo">
-                            <label class="form-check-label text-dark fw-semibold" for="destacadoNuevo">Destacar tarjeta en la Landing Page</label>
+
+                        <div class="mb-3">
+                            <label class="form-label text-dark fw-bold mb-3">Módulos Incluidos:</label>
+                            
+                            <h6 class="text-muted small fw-bold mb-2 text-uppercase d-flex justify-content-between align-items-center">
+                                <span>Ganadería y Producción</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input select-all-section" type="checkbox" checked title="Activar/Desactivar sección">
+                                </div>
+                            </h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_reproduccion" id="c_mod_reproduccion" checked><label for="c_mod_reproduccion"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Reproducción</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_genetica" id="c_mod_genetica" checked><label for="c_mod_genetica"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Genética</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_engorde" id="c_mod_engorde" checked><label for="c_mod_engorde"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Engorde</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_crianza" id="c_mod_crianza" checked><label for="c_mod_crianza"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Crianza</label></div></div>
+                            </div>
+
+                            <h6 class="text-muted small fw-bold mb-2 text-uppercase d-flex justify-content-between align-items-center">
+                                <span>Sanidad y Finca</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input select-all-section" type="checkbox" checked title="Activar/Desactivar sección">
+                                </div>
+                            </h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_vacunacion" id="c_mod_vacunacion" checked><label for="c_mod_vacunacion"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Vacunación</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_incidentes" id="c_mod_incidentes" checked><label for="c_mod_incidentes"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Incidentes</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_potreros" id="c_mod_potreros" checked><label for="c_mod_potreros"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Potreros</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_empleados" id="c_mod_empleados" checked><label for="c_mod_empleados"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Empleados</label></div></div>
+                            </div>
+
+                            <h6 class="text-muted small fw-bold mb-2 text-uppercase d-flex justify-content-between align-items-center">
+                                <span>Administración</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input select-all-section" type="checkbox" checked title="Activar/Desactivar sección">
+                                </div>
+                            </h6>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_inventario" id="c_mod_inventario" checked><label for="c_mod_inventario"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Inventario</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_finanzas" id="c_mod_finanzas" checked><label for="c_mod_finanzas"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Finanzas</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_estructura_costos" id="c_mod_estructura_costos" checked><label for="c_mod_estructura_costos"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Est. Costos</label></div></div>
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_auditoria" id="c_mod_auditoria" checked><label for="c_mod_auditoria"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Auditoría</label></div></div>
+                            </div>
+
+                            <h6 class="text-muted small fw-bold mb-2 text-uppercase d-flex justify-content-between align-items-center">
+                                <span>Inteligencia Artificial</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input select-all-section" type="checkbox" checked title="Activar/Desactivar sección">
+                                </div>
+                            </h6>
+                            <div class="row g-2">
+                                <div class="col-md-4"><div class="checkbox-card"><input type="checkbox" name="mod_chat_ia" id="c_mod_chat_ia" checked><label for="c_mod_chat_ia"><i class="bi bi-square text-muted me-2"></i><i class="bi bi-check-square-fill me-2 d-none"></i>Asistente IA (Veti)</label></div></div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -451,18 +620,53 @@
             const toggle = document.getElementById('sidebarToggle');
             const overlay = document.getElementById('sidebarOverlay');
 
+            function openSidebar() {
+                if (window.innerWidth < 992) {
+                    sidebar.classList.add('active');
+                    if(overlay) overlay.classList.add('active');
+                    document.body.classList.add('sidebar-open');
+                } else {
+                    sidebar.classList.remove('collapsed');
+                }
+            }
+
+            function closeSidebar() {
+                if (window.innerWidth < 992) {
+                    sidebar.classList.remove('active');
+                    if(overlay) overlay.classList.remove('active');
+                    document.body.classList.remove('sidebar-open');
+                } else {
+                    sidebar.classList.add('collapsed');
+                }
+            }
+
             if (toggle && sidebar) {
-                toggle.addEventListener('click', function() {
-                    sidebar.classList.toggle('active');
-                    overlay.classList.toggle('active');
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (window.innerWidth < 992) {
+                        if (sidebar.classList.contains('active')) closeSidebar();
+                        else openSidebar();
+                    } else {
+                        if (sidebar.classList.contains('collapsed')) openSidebar();
+                        else closeSidebar();
+                    }
                 });
             }
             if (overlay) {
-                overlay.addEventListener('click', function() {
-                    sidebar.classList.remove('active');
-                    overlay.classList.remove('active');
-                });
+                overlay.addEventListener('click', closeSidebar);
             }
+
+            // Lógica para marcar/desmarcar secciones enteras de módulos
+            document.querySelectorAll('.select-all-section').forEach(function(toggleBtn) {
+                toggleBtn.addEventListener('change', function() {
+                    const sectionRow = this.closest('h6').nextElementSibling;
+                    if (sectionRow && sectionRow.classList.contains('row')) {
+                        sectionRow.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+                            cb.checked = toggleBtn.checked;
+                        });
+                    }
+                });
+            });
         });
     </script>
 </body>

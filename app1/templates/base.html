@@ -280,6 +280,38 @@
             </div>
         </nav>
 
+        {% if dias_vencimiento is not None and dias_vencimiento <= 3 %}
+        <div class="px-4 mt-3">
+            <div class="alert alert-danger m-0 rounded-4 d-flex align-items-center justify-content-center py-3 shadow-sm border-0" role="alert" style="z-index: 1040;">
+                <i class="bi bi-exclamation-octagon-fill fs-4 me-3 flex-shrink-0"></i>
+                <div class="text-center">
+                    <strong>¡Aviso del Sistema!</strong> 
+                    {% if dias_vencimiento < 0 %}
+                    Tu suscripción ha <strong>vencido</strong>. Por favor, reporta tu pago inmediatamente.
+                    {% elif dias_vencimiento == 0 %}
+                    Tu suscripción <strong>vence hoy</strong>. Por favor, reporta tu pago.
+                    {% else %}
+                    Tu suscripción vence en <strong>{{ dias_vencimiento }} día{{ dias_vencimiento|pluralize }}</strong>.
+                    {% endif %}
+                    <a href="{% url 'perfil' %}" class="btn btn-sm btn-danger fw-bold ms-3 shadow-sm" onclick="localStorage.setItem('perfilTab', '#tab-pagos');" style="border-radius: 20px;">Gestionar Pagos</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if dias_vencimiento is not None and dias_vencimiento < 0 %}
+        <style>
+            /* Bloquear acciones de escritura si la suscripción está vencida */
+            .btn-success, .btn-primary:not(.btn-close), [data-bs-target^="#modalRegistrar"], 
+            form button[type="submit"]:not(#formPago button):not(.btn-warning):not(#btnSubmit), 
+            a[href*="exportar"], a[href*="plantilla"], #veti-input, #veti-send, #veti-attach-btn {
+                pointer-events: none !important;
+                opacity: 0.4 !important;
+                cursor: not-allowed !important;
+            }
+        </style>
+        {% endif %}
+
         <div class="container-fluid px-4">
             {% block content %}
             {% endblock %}
@@ -446,6 +478,14 @@
                 <li><a class="dropdown-item py-2" href="{% url 'incidentes' %}"><i class="bi bi-heartbreak me-2 text-white-50"></i> Incidentes</a></li>
                 {% endif %}
             </ul>
+        </div>
+
+        <!-- Asistente IA -->
+        <div class="nav-item">
+            <a href="{% url 'chat' %}" class="nav-link {% if request.resolver_match.url_name == 'chat' %}active{% endif %}">
+                <i class="bi bi-stars"></i>
+                <span>Veti IA</span>
+            </a>
         </div>
 
         <!-- Menú Toggle (Abre Sidebar para Contabilidad y RRHH) -->
