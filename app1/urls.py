@@ -6,6 +6,7 @@ urlpatterns = [
     path('robots.txt', views.robots_txt, name='robots_txt'),
     path('llms.txt', views.llms_txt, name='llms_txt'),
     path('login/', views.login, name='login'),
+    path('test-email/', views.test_email_view, name='test_email'),
     path('signup/', views.signup, name='signup'),
     path('cambiar_finca/', views.cambiar_finca, name='cambiar_finca'),
     path('crear_finca/', views.crear_finca, name='crear_finca'),

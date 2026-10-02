@@ -1,4 +1,20 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.mail import send_mail
+from django.http import HttpResponse
+from django.conf import settings
+
+def test_email_view(request):
+    try:
+        send_mail(
+            'Prueba Web Samanito',
+            'Esto es una prueba de envío desde el servidor web directamente.',
+            settings.DEFAULT_FROM_EMAIL,
+            ['juandiegoaranaperez@gmail.com'],
+            fail_silently=False,
+        )
+        return HttpResponse("¡Correo enviado exitosamente desde Django!")
+    except Exception as e:
+        return HttpResponse(f"Error enviando correo: {str(e)}")
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.db.models import Q, Sum, F
@@ -85,8 +101,8 @@ def login(request):
 
 def signup(request):
     if request.method == 'POST':
-        nombre = request.POST.get('nombre')
-        email = request.POST.get('email')
+        nombre = request.POST.get('nombre', '').strip()
+        email = request.POST.get('email', '').strip()
         password = request.POST.get('password')
         password_confirm = request.POST.get('password_confirm')
         terminos = request.POST.get('terminos')
@@ -97,6 +113,12 @@ def signup(request):
 
         if password != password_confirm:
             messages.error(request, 'Las contraseñas no coinciden')
+            return redirect('signup')
+
+        from app1.forms import validar_complejidad_password
+        valid_pwd, pwd_msg = validar_complejidad_password(password)
+        if not valid_pwd:
+            messages.error(request, pwd_msg)
             return redirect('signup')
 
         if User.objects.filter(nombre=nombre).exists():
@@ -1466,8 +1488,8 @@ def perfil(request):
         action = request.POST.get('action')
 
         if action == 'actualizar_datos':
-            nombre = request.POST.get('nombre')
-            email = request.POST.get('email')
+            nombre = request.POST.get('nombre', '').strip()
+            email = request.POST.get('email', '').strip()
 
             if User.objects.exclude(id=user.id).filter(nombre=nombre).exists():
                 messages.error(request, 'El nombre de usuario ya está en uso')
@@ -3048,5 +3070,53 @@ Formato estricto:
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def password_reset_view(request):
+    from app1.forms import CustomPasswordResetForm, app1_token_generator
+    if request.method == 'POST':
+        form = CustomPasswordResetForm(request.POST)
+        if form.is_valid():
+            form.save(
+                request=request,
+                token_generator=app1_token_generator,
+                html_email_template_name='registration/password_reset_email.html',
+                subject_template_name='registration/password_reset_subject.txt',
+                email_template_name='registration/password_reset_email.txt',
+            )
+            return redirect('password_reset_done')
+    else:
+        form = CustomPasswordResetForm()
+    return render(request, 'registration/password_reset_form.html', {'form': form})
+
+
+def password_reset_confirm_view(request, uidb64, token):
+    from django.utils.encoding import force_str
+    from django.utils.http import urlsafe_base64_decode
+    from app1.forms import CustomSetPasswordForm, app1_token_generator
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user_obj = User.objects.get(pk=uid, bloqueado=False)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user_obj = None
+
+    if user_obj is not None and app1_token_generator.check_token(user_obj, token):
+        validlink = True
+        if request.method == 'POST':
+            form = CustomSetPasswordForm(user_obj, request.POST)
+            if form.is_valid():
+                form.save()
+                return redirect('password_reset_complete')
+        else:
+            form = CustomSetPasswordForm(user_obj)
+    else:
+        validlink = False
+        form = None
+
+    return render(request, 'registration/password_reset_confirm.html', {
+        'form': form,
+        'validlink': validlink,
+    })
+
 
 
