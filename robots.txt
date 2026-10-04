@@ -1,0 +1,13 @@
+# robots.txt para Samanito Software Ganadero
+User-agent: *
+Allow: /
+Disallow: /page/
+Disallow: */page/*
+Disallow: /control/
+Disallow: /finanzas/
+Disallow: /perfil/
+Disallow: /admin/
+Disallow: /api/
+
+# Enlace Oficial al Mapa del Sitio
+Sitemap: https://samanito.com/sitemap.xml
