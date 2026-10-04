@@ -269,18 +269,18 @@ function cargarReporte() {
             data.animales.forEach(a => {
                 let badge = '';
                 if(a.sexo === 'H') {
-                    if(a.estado_produccion === 'LACTANCIA') badge = '<span class="badge bg-success">Lactancia</span>';
-                    else if(a.estado_produccion === 'SECA') badge = '<span class="badge bg-warning text-dark">Seca</span>';
-                    else badge = '<span class="badge bg-secondary">Hembra</span>';
+                    if(a.estado_produccion === 'LACTANCIA') badge = '<span class="badge bg-success text-white px-3 py-1">En Lactancia</span>';
+                    else if(a.estado_produccion === 'SECA') badge = '<span class="badge bg-warning text-dark px-3 py-1">Seca / Horra</span>';
+                    else badge = '<span class="badge bg-danger text-white px-3 py-1"><i class="bi bi-gender-female"></i> Hembra</span>';
                 } else {
-                    badge = '<span class="badge bg-primary">Macho</span>';
+                    badge = '<span class="badge bg-primary text-white px-3 py-1"><i class="bi bi-gender-male"></i> Macho</span>';
                 }
                 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="fw-bold">${a.codigo}</td>
                     <td>${a.nombre}</td>
-                    <td>${a.sexo === 'M' ? 'Macho' : 'Hembra'}</td>
+                    <td>${a.sexo === 'M' ? '<span class="badge bg-primary text-white px-3 py-1"><i class="bi bi-gender-male"></i> Macho</span>' : '<span class="badge bg-danger text-white px-3 py-1"><i class="bi bi-gender-female"></i> Hembra</span>'}</td>
                     <td>${badge}</td>
                 `;
                 tbody.appendChild(tr);

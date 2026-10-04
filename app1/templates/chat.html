@@ -13,13 +13,13 @@
      CHAT PAGE – VARIABLES
   ═══════════════════════════════════════════ */
   :root {
-    --cs-sidebar-bg:   #1e3b20;
-    --cs-sidebar-hover:#2d5a2f;
-    --cs-green:        #2e7d32;
-    --cs-green-light:  #4caf50;
-    --cs-green-dark:   #1b5e20;
-    --cs-text-muted:   #a5d6a7;
-    --cs-page-bg:      #f4f7f6;
+    --cs-sidebar-bg:   #1C2517;
+    --cs-sidebar-hover:#728156;
+    --cs-green:        #728156;
+    --cs-green-light:  #98A77C;
+    --cs-green-dark:   #1C2517;
+    --cs-text-muted:   #CFE1B9;
+    --cs-page-bg:      #CFE1B9;
     --cs-sidebar-w:    260px;
   }
 
@@ -118,18 +118,28 @@
     gap: 8px;
     margin: 12px 12px 8px;
     padding: 9px 14px;
-    background: rgba(76,175,80,0.15);
-    border: 1px solid rgba(76,175,80,0.3);
-    border-radius: 10px;
-    color: #a5d6a7;
+    background: var(--cs-green);
+    border: none;
+    border-radius: 9999px;
+    color: #E7F5DC;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background .18s, color .18s;
+    box-shadow: 6px 6px 14px rgba(40, 50, 30, 0.35), -6px -6px 14px rgba(130, 145, 100, 0.4);
+    transition: all 0.2s ease-in-out;
     text-align: left;
     flex-shrink: 0;
   }
-  .cs-new-btn:hover { background: rgba(76,175,80,0.28); color: #fff; }
+  .cs-new-btn:hover { 
+    background: var(--cs-green); 
+    color: #E7F5DC;
+    box-shadow: 8px 8px 18px rgba(40, 50, 30, 0.45), -8px -8px 18px rgba(140, 155, 110, 0.5);
+    transform: translateY(-1px);
+  }
+  .cs-new-btn:active {
+    box-shadow: inset 4px 4px 8px rgba(30, 40, 20, 0.4), inset -4px -4px 8px rgba(100, 115, 75, 0.5);
+    transform: translateY(1px);
+  }
   .cs-new-btn i { font-size: 1rem; }
 
   /* Búsqueda */
@@ -234,7 +244,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #fff;
+    background: #F8F9F3;
     position: relative;
   }
 
@@ -345,14 +355,15 @@
     max-width: 600px;
   }
   .veti-chip {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    background: #E7F5DC;
+    border: none;
+    border-radius: 9999px;
     padding: 10px 16px;
     font-size: 0.82rem;
-    color: #374151;
+    color: #728156;
     cursor: pointer;
-    transition: background .18s, border-color .18s, transform .15s;
+    box-shadow: 6px 6px 14px rgba(70, 85, 50, 0.25), -6px -6px 14px rgba(255, 255, 255, 0.6);
+    transition: all .2s ease-in-out;
     text-align: left;
     display: flex;
     align-items: center;
@@ -360,10 +371,14 @@
     font-weight: 500;
   }
   .veti-chip:hover {
-    background: #f0fdf4;
-    border-color: #86efac;
-    color: #15803d;
+    background: #E7F5DC;
+    color: #728156;
+    box-shadow: 8px 8px 18px rgba(70, 85, 50, 0.3), -8px -8px 18px rgba(255, 255, 255, 0.7);
     transform: translateY(-1px);
+  }
+  .veti-chip:active {
+    box-shadow: inset 4px 4px 8px rgba(70, 85, 50, 0.2), inset -4px -4px 8px rgba(255, 255, 255, 0.5);
+    transform: translateY(1px);
   }
 
   /* Mensajes */
@@ -509,19 +524,26 @@
   #veti-input::placeholder { color: #9ca3af; }
   #veti-send {
     width: 36px; height: 36px;
-    border-radius: 10px;
+    border-radius: 9999px;
     background: var(--cs-green);
     border: none;
-    color: #fff;
+    color: #E7F5DC;
     font-size: 0.95rem;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background .2s, transform .15s;
-    box-shadow: 0 2px 8px rgba(46,125,50,0.3);
+    transition: all .2s ease-in-out;
+    box-shadow: 4px 4px 10px rgba(40, 50, 30, 0.35), -4px -4px 10px rgba(130, 145, 100, 0.4);
   }
-  #veti-send:hover  { background: var(--cs-green-dark); transform: scale(1.07); }
-  #veti-send:active { transform: scale(.95); }
+  #veti-send:hover  { 
+    background: var(--cs-green); 
+    box-shadow: 6px 6px 14px rgba(40, 50, 30, 0.45), -6px -6px 14px rgba(140, 155, 110, 0.5);
+    transform: translateY(-1px); 
+  }
+  #veti-send:active { 
+    box-shadow: inset 2px 2px 6px rgba(30, 40, 20, 0.4), inset -2px -2px 6px rgba(100, 115, 75, 0.5);
+    transform: translateY(1px); 
+  }
   #veti-send:disabled { background: #d1d5db; box-shadow: none; cursor: not-allowed; transform: none; }
   .input-hint {
     text-align: center;
