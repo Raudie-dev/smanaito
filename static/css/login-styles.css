@@ -1,11 +1,11 @@
 :root {
-    --primary-color: #2e7d32; /* Verde agricultura */
-    --primary-dark: #1b5e20;
-    --secondary-color: #8d6e63; /* Marrón tierra */
-    --accent-color: #fbc02d; /* Amarillo sol/trigo */
-    --bg-overlay: rgba(255, 255, 255, 0.85); /* Glassmorphism claro */
-    --text-main: #333333;
-    --text-muted: #666666;
+    --primary-color: #728156; /* Deep Olive Primary */
+    --primary-dark: #1C2517; /* Dark Contrast Block */
+    --secondary-color: #98A77C; /* Moss Green */
+    --accent-color: #B6C99B; /* Muted Sage Green */
+    --bg-overlay: rgba(248, 249, 243, 0.92); /* Glassmorphism landing */
+    --text-main: #1A2315;
+    --text-muted: #4B5542;
 }
 
 body.admin-login {
@@ -37,14 +37,14 @@ body.admin-login::before {
 
 .login-card {
     background: var(--bg-overlay);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 20px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
     padding: 40px;
     width: 100%;
     max-width: 450px;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 24px 48px -12px rgba(114, 129, 86, 0.2), 0 8px 24px -4px rgba(27, 36, 22, 0.08);
+    border: 1px solid rgba(182, 201, 155, 0.4);
     position: relative;
     z-index: 2; /* Sobre la capa oscura */
 }
@@ -73,6 +73,7 @@ body.admin-login::before {
 }
 
 .login-subtitle {
+    font-family: 'Outfit', sans-serif;
     color: var(--text-main);
     font-size: 1.5rem;
     font-weight: 700;
@@ -151,9 +152,9 @@ body.admin-login::before {
 .btn-login {
     width: 100%;
     padding: 14px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    background: var(--primary-color);
     border: none;
-    border-radius: 10px;
+    border-radius: 24px;
     color: white;
     font-size: 1.1rem;
     font-weight: 600;
@@ -162,13 +163,14 @@ body.admin-login::before {
     justify-content: center;
     gap: 10px;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 5px 15px rgba(46, 125, 50, 0.4);
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 20px rgba(114, 129, 86, 0.3);
 }
 
 .btn-login:hover {
+    background: #5f6c46;
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(46, 125, 50, 0.6);
+    box-shadow: 0 12px 28px rgba(114, 129, 86, 0.45);
 }
 
 .btn-login:active {

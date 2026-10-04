@@ -1,14 +1,14 @@
 :root {
-    --primary-color: #2e7d32;
-    --primary-dark: #1b5e20;
-    --primary-light: #4caf50;
-    --secondary-color: #8d6e63;
-    --accent-color: #fbc02d;
-    --bg-main: #f4f7f6;
-    --sidebar-bg: #1e3b20; /* Verde muy oscuro */
-    --sidebar-hover: #2d5a2f;
-    --text-muted: #a5d6a7;
-    --card-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    --primary-color: #728156; /* Deep Olive Primary */
+    --primary-dark: #1C2517; /* Dark Contrast Block */
+    --primary-light: #98A77C; /* Moss Green */
+    --secondary-color: #88976C; /* Medium Sage Olive */
+    --accent-color: #B6C99B; /* Muted Sage Green */
+    --bg-main: #CFE1B9; /* Soft Sage Tint for background */
+    --sidebar-bg: #1C2517; /* Dark Contrast block for sidebar */
+    --sidebar-hover: #728156; /* Deep Olive */
+    --text-muted: #CFE1B9; /* Soft Sage Tint */
+    --card-shadow: 0 12px 32px -8px rgba(114, 129, 86, 0.08), 0 4px 12px -2px rgba(27, 36, 22, 0.04);
 }
 
 body { 
@@ -17,11 +17,19 @@ body {
     width: 100vw;
     max-width: 100vw;
     overflow-x: hidden; 
-    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
     background-color: var(--bg-main);
     font-size: 1.125rem; /* 18px base para accesibilidad */
     line-height: 1.6;
-    color: #212529; /* Alto contraste */
+    color: #1A2315; /* Alto contraste */
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Outfit', sans-serif !important;
+    color: var(--primary-dark);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
 }
 
 /* Sidebar Styles */
@@ -123,7 +131,7 @@ body {
 /* Cards & Dashboard Elements */
 .card {
     border: none;
-    border-radius: 12px;
+    border-radius: 24px;
     box-shadow: var(--card-shadow);
     transition: transform 0.2s ease;
 }
@@ -133,7 +141,8 @@ body {
 }
 
 .card h5 {
-    color: #212529;
+    font-family: 'Outfit', sans-serif;
+    color: var(--primary-dark);
     font-size: 1.125rem;
     font-weight: 600;
 }
@@ -407,3 +416,104 @@ body {
     display: none;
 }
 
+
+/* Adaptación de Botones Neumórficos - Estilo Medio */
+#content .btn:not(.btn-close):not(.btn-link) {
+    background: #728156 !important;
+    color: #E7F5DC !important;
+    border-radius: 9999px !important;
+    font-weight: 500 !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    box-shadow: 6px 6px 14px rgba(40, 50, 30, 0.35), -6px -6px 14px rgba(130, 145, 100, 0.4) !important;
+    transition: all 0.2s ease-in-out !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+}
+
+#content .btn.btn-sm:not(.btn-close):not(.btn-link) {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+
+#content .btn:not(.btn-close):not(.btn-link):hover {
+    background: #728156 !important;
+    color: #E7F5DC !important;
+    box-shadow: 8px 8px 18px rgba(40, 50, 30, 0.45), -8px -8px 18px rgba(140, 155, 110, 0.5) !important;
+    transform: translateY(-1px) !important;
+}
+
+#content .btn:not(.btn-close):not(.btn-link):active {
+    background: #728156 !important;
+    color: #E7F5DC !important;
+    box-shadow: inset 4px 4px 8px rgba(30, 40, 20, 0.4), inset -4px -4px 8px rgba(100, 115, 75, 0.5) !important;
+    transform: translateY(1px) !important;
+}
+
+/* Modals should also have these buttons */
+.modal-content .btn:not(.btn-close):not(.btn-link) {
+    background: #728156 !important;
+    color: #E7F5DC !important;
+    border-radius: 9999px !important;
+    font-weight: 500 !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    box-shadow: 6px 6px 14px rgba(40, 50, 30, 0.35), -6px -6px 14px rgba(130, 145, 100, 0.4) !important;
+    transition: all 0.2s ease-in-out !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+}
+
+.modal-content .btn:not(.btn-close):not(.btn-link):hover {
+    background: #728156 !important;
+    color: #E7F5DC !important;
+    box-shadow: 8px 8px 18px rgba(40, 50, 30, 0.45), -8px -8px 18px rgba(140, 155, 110, 0.5) !important;
+    transform: translateY(-1px) !important;
+}
+
+.modal-content .btn:not(.btn-close):not(.btn-link):active {
+    background: #728156 !important;
+    color: #E7F5DC !important;
+    box-shadow: inset 4px 4px 8px rgba(30, 40, 20, 0.4), inset -4px -4px 8px rgba(100, 115, 75, 0.5) !important;
+    transform: translateY(1px) !important;
+}
+
+/* Modal Header Styling */
+.modal-header {
+    background-color: #728156 !important;
+    color: #E7F5DC !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.modal-header .modal-title, .modal-header h5 {
+    color: #E7F5DC !important;
+}
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%) !important;
+}
+
+/* Remove glow from sidebar toggle */
+#sidebarToggle, #sidebarToggle:hover, #sidebarToggle:active {
+    box-shadow: none !important;
+}
+
+/* Estandarización Global de Etiquetas (Badges) */
+.badge {
+    padding: 0.4rem 0.75rem !important;
+    font-weight: 500 !important;
+    border-radius: 6px !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+    font-family: 'Inter', sans-serif !important;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
+}
+
+/* Forzar colores sólidos y paleta del sistema, ignorando opacidades */
+.badge[class*="bg-opacity-"] { --bs-bg-opacity: 1 !important; }
+.badge[class*="text-"] { color: inherit !important; }
+
+.badge.bg-success { background-color: #728156 !important; color: #E7F5DC !important; }
+.badge.bg-primary { background-color: #0d6efd !important; color: #fff !important; }
+.badge.bg-danger { background-color: #dc3545 !important; color: #fff !important; }
+.badge.bg-secondary { background-color: #88976C !important; color: #fff !important; }
+.badge.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+.badge.bg-info { background-color: #0dcaf0 !important; color: #000 !important; }
+.badge.bg-light { background-color: #E7F5DC !important; color: #52613B !important; border: 1px solid #728156 !important; }
