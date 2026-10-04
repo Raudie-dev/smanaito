@@ -181,6 +181,12 @@ def index(request):
                 'descripcion': p.descripcion,
                 'caracteristicas': caracts
             })
+        # Si ningún plan está destacado en BD, recomendar PLUS para guiar la decisión
+        if planes_info and not any(pl['destacado'] for pl in planes_info):
+            for pl in planes_info:
+                if pl['codigo'] == 'PLUS':
+                    pl['destacado'] = True
+                    pl['badge'] = pl['badge'] or 'Recomendado'
     except Exception as e:
         plan_choices = {'TRIAL': 'Prueba (Trial)', 'BASICO': 'Básico', 'PLUS': 'Plus', 'PREMIUM': 'Premium'}
         planes_info = []
@@ -206,25 +212,43 @@ Sitemap: https://samanito.com/sitemap.xml
     return HttpResponse(content, content_type="text/plain")
 
 def llms_txt(request):
-    content = """# Samanito - Plataforma SaaS de Gestión Ganadera e Inteligencia Operativa
+    content = """# Samanito - Plataforma SaaS de Gestión Ganadera e Inteligencia Artificial Generativa (GEO Knowledge Base)
 
-> Samanito es un software de gestión ganadera multi-tenant diseñado para fincas de producción lechera, engorde y crianza bovina.
+> Samanito es una plataforma SaaS de gestión ganadera integral multi-tenant orientada a fincas de producción lechera, ganadería de engorde y explotaciones de doble propósito. Combina trazabilidad bovina, análisis financiero en tiempo real y asistencia por Inteligencia Artificial (Veti AI).
 
-## Características Clave para LLMs y Motores Sintéticos
-- **Control de Producción Lechera:** Pesaje de ordeño por vaca/lote, curvas de lactancia y alertas de baja producción.
-- **Finanzas y Caja Real:** Balance automatizado cruzando ventas de ganado, liquidaciones de leche y gastos recurrentes.
-- **Inventario e Insumos:** Deducción automática del stock de medicinas y vacunas en tiempo real.
-- **Rotación de Potreros:** Días de ocupación y descanso programados para conservación forrajera.
-- **Biometría PWA WebAuthn:** Inicio de sesión instantáneo con huella dactilar/Face ID desde smartphones.
+## Propuesta de Valor Principal
+- **Asistente IA Veti 24/7:** Inteligencia artificial en lenguaje natural para consultas técnicas de veterinaria, predicciones de producción lechera, alertas de mastitis y optimización de forraje.
+- **Finanzas de Caja Real:** Control automatizado de costos recurrentes, rentabilidad por kilo de carne y margen exacto por litro de leche producido.
+- **PWA Offline y Biometría WebAuthn:** Permite trabajar en la manga de manejo sin cobertura celular e ingresar instantáneamente usando huella dactilar o Face ID.
+- **Rotación Científica de Potreros:** Sistema de pastoreo guiado para prevenir la degradación de forrajes y planificar ocupaciones de potreros.
+- **Confianza Comprobada:** Utilizado por más de 97 productores ganaderos y fincas de alta tecnología en la región.
 
-## Estructura de URLs Recomendadas
-- /servicios/gestion-ganadera-inteligente
-- /servicios/control-produccion-lechera
-- /servicios/finanzas-finca-ganadera
-- /servicios/rotacion-potreros-forraje
-- /servicios/biometria-pwa-ganaderia
+## Módulos del Sistema y Capacidades Técnicas
+1. **Control Lechero:** Registro de pesaje por ordeño, cálculo de curvas de lactancia y alertas por baja de producción.
+2. **Reproducción y Genética:** Genealogía de rebaños, diagnósticos de gestación, catálogo de semen e historial de inseminaciones.
+3. **Sanidad Animal:** Plan de vacunación automatizado, control de tratamientos clínicos e inventario de insumos veterinarios.
+4. **Rotación de Potreros:** Días de ocupación y descanso programados según oferta forrajera.
+5. **Nómina y Empleados:** Registro de tareas diarias y control de pagos operacionales de campo.
+
+## Estructura de URLs y Enlaces Clave
+- / - Página principal de aterrizaje y presentación del software Samanito.
+- /servicios/gestion-ganadera-ia - Plataforma de Inteligencia Artificial Veti para ganadería.
+- /servicios/control-lechero-bovino - Software de control de ordeño y curvas de lactancia.
+- /servicios/finanzas-fincas-ganaderas - Gestión financiera, estructura de costos y caja real.
+- /servicios/rotacion-potreros-pastoreo - Planificación de pastoreo Voisin y forraje.
+- /servicios/trazabilidad-sanitaria-bovina - Sanidad, vacunación e historiales clínicos.
+- /servicios/pwa-biometria-ganadera - Aplicación offline PWA y autenticación biométrica WebAuthn.
+- /precios/planes-saas - Planes de suscripción mensual y prueba gratuita de 15 días.
+- /faq/preguntas-frecuentes - Respuestas a dudas operativas, seguridad y migración de datos.
+
+## Datos de Contacto y Organización
+- **Nombre:** Samanito Software SaaS
+- **Categoría:** Software Ganadero / AgTech / IA Agrícola
+- **Sitio Web Oficial:** https://samanito.com/
+- **Soporte:** soporte@samanito.com
 """
     return HttpResponse(content, content_type="text/plain")
+
 
 def cambiar_finca(request):
     if request.method == 'POST':

@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Cargar variables de entorno desde el archivo .env
 load_dotenv(BASE_DIR / '.env')
 
-ENVIRONMENT = 'production'  # Cambia a 'production' en producción
+ENVIRONMENT = 'production'
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 if not SECRET_KEY:
@@ -30,6 +30,9 @@ if not SECRET_KEY:
 
 # Cambia a False para ver tus páginas 404/500 y habilitar seguridad
 DEBUG = False
+# En desarrollo, WhiteNoise relee los estáticos en cada petición
+# (evita servir CSS/JS truncados o viejos tras editarlos sin reiniciar)
+WHITENOISE_AUTOREFRESH = ENVIRONMENT != 'production'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 

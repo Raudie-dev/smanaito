@@ -4,603 +4,763 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Samanito | Software Ganadero de Gestión Integral, Finanzas y Producción Lechera</title>
-    <meta name="description" content="Samanito es el software ganadero cloud todo-en-uno para administrar fincas: control de inventarios, producción lechera, finanzas, rotación de potreros y biometría.">
-    <meta name="keywords" content="software ganadero, gestion de fincas, produccion lechera, trazabilidad bovina, finanzas ganaderas, PWA ganaderia">
+    
+    <title>Samanito | Software de Control Operativo Ganadero con Asistente IA 24/7</title>
+    <meta name="description" content="Optimiza la gestión operativa de ordeños, rotación de potreros, sanidad y registros de tu finca ganadera con Samanito e Inteligencia Artificial Veti 24/7.">
+    <meta name="keywords" content="software ganadero, control operativo ganadero, ordeño bovino, rotacion de potreros, sanidad animal, trazabilidad bovina, asistente veterinario ia">
     <meta name="author" content="Samanito Software SaaS">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://samanito.com/">
 
-    <!-- OpenGraph Tags -->
-    <meta property="og:title" content="Samanito | La Revolución en la Gestión de Fincas Ganaderas">
-    <meta property="og:description" content="Optimiza la producción de leche, controla costos recurrentes y lleva la trazabilidad de tus rebaños desde la nube.">
-    <meta property="og:image" content="{% static 'img/hero_bg.png' %}">
+    <!-- OpenGraph & Twitter Cards -->
+    <meta property="og:title" content="Samanito | Control Operativo Ganadero e Inteligencia Artificial">
+    <meta property="og:description" content="Centraliza la operación de tu finca desde cualquier dispositivo. IA Veti 24/7, pesaje de leche y control sanitario con alertas.">
+    <meta property="og:image" content="{% static 'img/mockup_dashboard.png' %}">
     <meta property="og:type" content="website">
 
-    <!-- Twitter Cards -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Samanito - Software Ganadero Inteligente">
-    <meta name="twitter:description" content="Toma el control operativo y financiero de tu finca desde cualquier dispositivo.">
-    <meta name="twitter:image" content="{% static 'img/hero_bg.png' %}">
-
     <link rel="icon" type="image/png" href="{% static 'img/Samanito_logo.png' %}">
-    
-    <!-- Google Fonts -->
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Bootstrap 5.3 CSS -->
+    <!-- Bootstrap 5.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     
-    <!-- Estilos Personalizados Landing Page -->
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}?v={% now 'U' %}">
-
-    <!-- Datos Estructurados JSON-LD (Organization y LocalBusiness) -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "Samanito Software Ganadero",
-      "url": "https://samanito.com",
-      "logo": "https://samanito.com/static/img/Samanito_logo.png",
-      "description": "Plataforma SaaS para la gestión integral de fincas ganaderas, finanzas, potreros y producción lechera.",
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "telephone": "+58-414-0000000",
-        "contactType": "customer service",
-        "availableLanguage": ["Spanish"]
-      }
-    }
-    </script>
-
-    <!-- Schema FAQPage para SEO / GEO -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "¿Qué es Samanito y cómo ayuda a mi finca ganadera?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Samanito es un software ganadero en la nube (SaaS) que centraliza el inventario de animales, el control de ordeños diarios, el inventario de medicinas, la rotación de potreros y la estructura de costos financieros de tu finca."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "¿Funciona sin internet en el campo?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Sí, Samanito cuenta con arquitectura PWA instalable en celulares Android e iOS con soporte para biometría/huella dactilar e ingreso sin conexión."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "¿Cómo se calcula la liquidez real en caja?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "El módulo de Finanzas cruza automáticamente las liquidaciones de venta de leche y venta de ganado con los gastos fijos e insumos consumidos."
-          }
-        }
-      ]
-    }
-    </script>
+    <!-- Custom Natural Sage Landing CSS -->
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v={% now 'U' %}">
 </head>
+
 <body>
-
-    <!-- Reading Progress Bar -->
-    <div id="reading-progress-bar"></div>
-
-    <!-- Navegación Principal Flotante -->
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-glass">
-        <div class="container-fluid px-2 px-lg-3">
-            <a class="navbar-brand d-flex align-items-center" href="/">
-                <img src="{% static 'img/Samanito_logo.png' %}" alt="Samanito Software Ganadero - Logo" width="32" height="32" class="me-2">
-                <span>Samanito</span>
+    <!-- Floating Navbar Glassmorphism in Natural Tones -->
+    <header class="navbar navbar-expand-lg navbar-light navbar-glass">
+        <div class="container-fluid px-3">
+            <a class="navbar-brand d-flex align-items-center me-4 gap-2" href="/">
+                <img src="{% static 'img/Samanito_logo.png' %}" height="36" alt="Samanito - Logo" class="brand-logo" loading="eager">
+                <span class="fw-extrabold font-heading text-dark fs-4 tracking-tight">Samanito</span>
             </a>
-            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+
+            <button class="navbar-toggler border-0 shadow-none text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Navegación principal">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
             <div class="collapse navbar-collapse" id="navbarMain">
-                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 align-items-center gap-1">
-                    <li class="nav-item"><a class="nav-link" href="#caracteristicas">Módulos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#capturas">Capturas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#planes">Planes & Tarifas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#comparativa">Comparativa</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#faq">Preguntas Frecuentes</a></li>
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-1">
+                    <li class="nav-item"><a class="nav-link" href="#showcase-app">Demostración App</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#analitica-finca">Control Operativo</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#confianza-resenas">Experiencias Reales</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#asistente-ia">Asistente Veti IA</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#modulos">Módulos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#precios">Planes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#faq">Preguntas Operativas</a></li>
                 </ul>
-                <div class="d-flex align-items-center gap-2">
-                    <a href="{% url 'login' %}" class="btn btn-glow-outline btn-sm text-nowrap">Iniciar Sesión</a>
+
+                <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0">
+                    <a href="{% url 'login' %}" class="btn btn-sage-outline btn-sm px-3">Ingresar</a>
+                    <a href="{% url 'signup' %}" class="btn btn-olive btn-sm px-4">Probar Gratis 15 Días</a>
                 </div>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <!-- Hero Section -->
-    <section class="hero-section">
-        <video autoplay loop muted playsinline class="hero-video-bg">
-            <source src="{% static 'img/hero_video.mp4' %}" type="video/mp4">
-        </video>
-        <div class="hero-overlay"></div>
-        <div class="container hero-content text-center py-5">
-            <div class="row justify-content-center">
-                <div class="col-lg-9 col-xl-8">
-                    <span class="badge bg-success bg-opacity-25 text-light border border-success border-opacity-50 px-3 py-2 rounded-pill mb-3 fw-normal" style="backdrop-filter: blur(8px);">
-                        <i class="bi bi-people-fill text-warning me-1"></i> +<span class="counter-value fw-bold" data-target="{{ usuarios_activos }}">0</span> Ganaderos Confiando en Samanito
+    <main id="main-content">
+        <!-- ==========================================================================
+             HERO SECTION (PROPUESTA DE VALOR ENFOCADA EN EFICIENCIA Y CONTROL OPERATIVO)
+             ========================================================================== -->
+        <section class="hero-section-natural" id="inicio">
+            <div class="container">
+                <div class="hero-banner-card">
+                    <video class="hero-banner-video" autoplay muted loop playsinline preload="auto"
+                           poster="{% static 'img/hero_natural.png' %}" aria-hidden="true">
+                        <source src="{% static 'video/hero.mp4' %}" type="video/mp4">
+                    </video>
+                    <div class="hero-banner-overlay"></div>
+
+                    <div class="hero-banner-content max-w-700">
+                        <div class="hero-pill-badge mb-3">
+                            <i class="bi bi-gear-wide-connected text-warning me-1"></i>
+                            <span>Control Operativo Ganadero de Alta Precisión</span>
+                        </div>
+
+                        <h1 class="text-white display-4 fw-extrabold mb-3">
+                            Optimiza la Gestión Operativa de tu Finca Ganadera con Inteligencia Artificial
+                        </h1>
+
+                        <p class="text-white-50 fs-5 mb-4">
+                            Centraliza ordeños, rotación de potreros, salud animal y registros de rebaño en una sola plataforma. Elimina los errores del cuaderno y simplifica el trabajo diario de tu finca con Veti IA 24/7.
+                        </p>
+
+                        <div class="hero-cta-row d-flex flex-wrap gap-3 align-items-center">
+                            <a href="{% url 'signup' %}" class="btn btn-olive px-4 py-3 fs-6">
+                                <i class="bi bi-rocket-takeoff-fill me-2"></i><span class="d-none d-md-inline">Probar Samanito Gratis (15 Días)</span><span class="d-md-none">Probar Gratis</span>
+                            </a>
+                            <a href="#showcase-app" class="btn btn-sage-outline px-4 py-3 fs-6">
+                                <i class="bi bi-display me-2 text-success"></i><span class="d-none d-md-inline">Ver App en Full Screen & Móvil</span><span class="d-md-none">Ver App</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Floating Stats Pills Row -->
+                    <div class="stats-pills-row" id="heroStatsSlider">
+                        <div class="stat-pill-card">
+                            <div class="stat-pill-num">100%</div>
+                            <div>
+                                <div class="fw-bold small">Control de Registros</div>
+                                <div class="extra-small text-muted">Ordeño y Potreros</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-pill-card">
+                            <div class="stat-pill-num">500+</div>
+                            <div>
+                                <div class="fw-bold small">Fincas Tecnificadas</div>
+                                <div class="extra-small text-muted">Operación Organizada</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-pill-card">
+                            <div class="stat-pill-num">0%</div>
+                            <div>
+                                <div class="fw-bold small">Extravío de Datos</div>
+                                <div class="extra-small text-muted">Historial Centralizado</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Flechas del slider de estadísticas (solo móvil) -->
+                    <div class="hero-stats-nav d-md-none">
+                        <button type="button" id="heroStatsPrev" aria-label="Estadística anterior"><i class="bi bi-caret-left-fill"></i></button>
+                        <button type="button" id="heroStatsNext" aria-label="Estadística siguiente"><i class="bi bi-caret-right-fill"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================================================
+             DEMOSTRACIÓN DE LA APP EN FULL SCREEN Y MÓVIL
+             ========================================================================== -->
+        <section class="py-5" id="showcase-app">
+            <div class="container">
+                <div class="app-showcase-section text-center">
+                    <span class="badge bg-white text-dark px-3 py-2 rounded-pill font-heading fw-bold mb-2 border">
+                        <i class="bi bi-phone-vibrate me-1 text-success"></i> Operación Multidispositivo
                     </span>
-                    <h1 class="hero-title mb-3">Toma el control operativo y financiero de tu finca ganadera.</h1>
-                    <p class="hero-subtitle mb-4">Samanito automatiza el inventario de rebaños, el rendimiento de ordeño, la rotación de potreros y el flujo de caja real desde cualquier teléfono celular o computadora.</p>
-                    <div class="d-flex flex-wrap gap-3 justify-content-center">
-                        <a href="{% url 'signup' %}" class="btn-glow">
-                            Comenzar Prueba Gratuita <i class="bi bi-rocket-takeoff ms-2 fs-5"></i>
-                        </a>
-                        <a href="#planes" class="btn-glow-outline">
-                            Ver Planes & Precios <i class="bi bi-tag-fill ms-1"></i>
-                        </a>
+                    <h2 class="h2 fw-bold mb-3">Diseñado para el Trabajo Diario en la Oficina y en el Potrero</h2>
+                    <p class="text-secondary max-w-700 mx-auto mb-4">
+                        Registra pesajes en el establo desde el celular o analiza la planificación forrajera en la computadora de la finca con una interfaz rápida e intuitiva.
+                    </p>
+
+                    <!-- View Switcher Controls -->
+                    <div class="app-view-toggle flex-wrap justify-content-center gap-2 mb-4">
+                        <button class="app-view-btn active" id="showcase-btn-fullscreen">
+                            <i class="bi bi-display me-2"></i> Computadora (Dashboard)
+                        </button>
+                        <button class="app-view-btn" id="showcase-btn-mobile">
+                            <i class="bi bi-phone me-2"></i> Teléfono (Veti IA Móvil)
+                        </button>
+                        <button class="app-view-btn" id="showcase-btn-combined">
+                            <i class="bi bi-layers-half me-2"></i> Vista Combinada
+                        </button>
+                    </div>
+
+                    <!-- 1. Full Screen Showcase View (Desktop MacBook Air) -->
+                    <div id="showcase-view-fullscreen" class="desktop-hardware-wrapper text-center mx-auto" style="max-width: 960px;">
+                        <img src="{% static 'img/mockup_desk.png' %}" alt="Samanito en Computadora - MacBook Air" class="img-fluid d-block mx-auto filter-drop-shadow">
+                    </div>
+
+                    <!-- 2. Mobile Showcase View (Smartphone iPhone 15 Pro) -->
+                    <div id="showcase-view-mobile" class="mobile-hardware-wrapper text-center d-none">
+                        <div class="mobile-mockup-card mx-auto" style="max-width: 340px;">
+                            <img src="{% static 'img/mockup_mobile_app.png' %}" alt="Samanito en Teléfono - iPhone 15 Pro Veti" class="img-fluid d-block mx-auto filter-drop-shadow">
+                        </div>
+                    </div>
+
+                    <!-- 3. Combined View (MacBook Air + iPhone 15 Pro floating overlay) -->
+                    <div id="showcase-view-combined" class="mockup-combined-wrapper position-relative mx-auto d-none" style="max-width: 980px;">
+                        <div class="desktop-hardware-main">
+                            <img src="{% static 'img/mockup_desk.png' %}" alt="Samanito Computadora" class="img-fluid d-block mx-auto filter-drop-shadow">
+                        </div>
+                        <!-- Floating iPhone 15 Pro Overlay -->
+                        <div class="combined-mobile-floating d-none d-md-block">
+                            <img src="{% static 'img/mockup_mobile_app.png' %}" alt="Samanito Teléfono" class="img-fluid d-block filter-drop-shadow">
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- MÓDULOS & CARACTERÍSTICAS PRINCIPALES -->
-    <section id="caracteristicas" class="py-5 bg-white">
-        <div class="container py-4">
-            <div class="text-center max-width-700 mx-auto mb-5">
-                <span class="text-uppercase text-success fw-bold small tracking-wide">Módulos Especializados</span>
-                <h2 class="display-6 fw-bold text-dark">Solución Ganadera Integral 360°</h2>
-                <p class="text-muted">Diseñado con la experiencia de productores ganaderos para cubrir cada necesidad operativa del campo.</p>
-            </div>
-
-            <div class="row g-4">
-                <!-- Card 1 -->
-                <div class="col-md-6 col-lg-4 reveal-card">
-                    <div class="hover-card-tilt">
-                        <div class="icon-box-glow">
-                            <i class="bi bi-bar-chart-line-fill"></i>
+        <!-- ==========================================================================
+             BLOQUE OSCURO DE ANALÍTICA Y CONTROL OPERATIVO (#1C2517)
+             ========================================================================== -->
+        <section class="py-5" id="analitica-finca">
+            <div class="container">
+                <div class="dark-analytics-section">
+                    <div class="row align-items-center gy-4 mb-5">
+                        <div class="col-lg-6">
+                            <span class="analytics-metric-badge mb-3 d-inline-block">Control de Procesos Ganaderos</span>
+                            <h2 class="h2 text-white fw-bold mb-3">Información Operativa Clara para Tomar Decisiones a Tiempo</h2>
+                            <p class="text-white-50 fs-6 mb-4">
+                                Visualiza al instante la evolución de tus ordeños, la disponibilidad forrajera de tus potreros y el estado sanitario de todo el rebaño.
+                            </p>
                         </div>
-                        <h3 class="h5 fw-bold mb-2">Control de Producción Lechera</h3>
-                        <p class="text-muted small mb-0">Registra pesajes diarios por vaca o lote. Visualiza curvas de rendimiento de 7 días y detecta bajas de producción tempranas.</p>
-                    </div>
-                </div>
-
-                <!-- Card 2 -->
-                <div class="col-md-6 col-lg-4 reveal-card">
-                    <div class="hover-card-tilt">
-                        <div class="icon-box-glow">
-                            <i class="bi bi-cash-coin"></i>
-                        </div>
-                        <h3 class="h5 fw-bold mb-2">Estructura de Costos y Caja</h3>
-                        <p class="text-muted small mb-0">Registra gastos recurrentes semanales, mensuales y anuales. Obtén la liquidez real disponible cruzando ventas de ganado y leche.</p>
-                    </div>
-                </div>
-
-                <!-- Card 3 -->
-                <div class="col-md-6 col-lg-4 reveal-card">
-                    <div class="hover-card-tilt">
-                        <div class="icon-box-glow">
-                            <i class="bi bi-shield-plus"></i>
-                        </div>
-                        <h3 class="h5 fw-bold mb-2">Sanidad & Descuento de Almacén</h3>
-                        <p class="text-muted small mb-0">Registra aplicaciones clínicas o vacunaciones y el sistema descontará automáticamente la dosis exacta del stock de farmacia.</p>
-                    </div>
-                </div>
-
-                <!-- Card 4 -->
-                <div class="col-md-6 col-lg-4 reveal-card">
-                    <div class="hover-card-tilt">
-                        <div class="icon-box-glow">
-                            <i class="bi bi-compass-fill"></i>
-                        </div>
-                        <h3 class="h5 fw-bold mb-2">Rotación de Potreros y Forraje</h3>
-                        <p class="text-muted small mb-0">Optimiza los días de descanso y ocupación de tus potreros para garantizar forraje de calidad y evitar la sobrepastoreada.</p>
-                    </div>
-                </div>
-
-                <!-- Card 5 -->
-                <div class="col-md-6 col-lg-4 reveal-card">
-                    <div class="hover-card-tilt">
-                        <div class="icon-box-glow">
-                            <i class="bi bi-person-badge-fill"></i>
-                        </div>
-                        <h3 class="h5 fw-bold mb-2">Personal y Nómina Ganadera</h3>
-                        <p class="text-muted small mb-0">Administra trabajadores, mayorales y obreros con recibos de pago estructurados e historial de desembolsos por finca.</p>
-                    </div>
-                </div>
-
-                <!-- Card 6 -->
-                <div class="col-md-6 col-lg-4 reveal-card">
-                    <div class="hover-card-tilt">
-                        <div class="icon-box-glow">
-                            <i class="bi bi-fingerprint"></i>
-                        </div>
-                        <h3 class="h5 fw-bold mb-2">Acceso Rápido desde tu Teléfono</h3>
-                        <p class="text-muted small mb-0">Llévalo directamente en tu teléfono inteligente (Android o iPhone) e ingresa con tu huella dactilar de forma ultrarrápida sin digitar contraseñas.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECCIÓN DE CAPTURAS DEL SISTEMA / INTERFAZ EN ACCIÓN -->
-    <section id="capturas" class="py-5 bg-dark text-white position-relative overflow-hidden" style="background: linear-gradient(180deg, #111e16 0%, #08110b 100%);">
-        <div class="container py-4 position-relative" style="z-index: 2;">
-            <div class="text-center max-width-700 mx-auto mb-5">
-                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-3 py-1.5 rounded-pill mb-2">
-                    <i class="bi bi-display me-1"></i> Interfaz Moderna & Móvil
-                </span>
-                <h2 class="display-6 fw-bold text-white">Capturas de Pantalla en Acción</h2>
-                <p class="text-white-50">Explora la experiencia de usuario diseñada para maximizar la velocidad y simplicidad en el manejo ganadero.</p>
-            </div>
-
-            <!-- Tab Navigation for Screenshots -->
-            <ul class="nav nav-pills justify-content-center mb-5 gap-2 border-0" id="showcaseTabs" role="tablist">
-                <li class="nav-item">
-                    <button class="nav-link active rounded-pill px-4 py-2 text-white border border-light border-opacity-25" id="tab-dashboard" data-bs-toggle="pill" data-bs-target="#showcase-dashboard" type="button">
-                        <i class="bi bi-speedometer2 me-2 text-success"></i> Panel Operativo
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link rounded-pill px-4 py-2 text-white border border-light border-opacity-25" id="tab-finanzas" data-bs-toggle="pill" data-bs-target="#showcase-finanzas" type="button">
-                        <i class="bi bi-cash-stack me-2 text-warning"></i> Finanzas & Caja
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link rounded-pill px-4 py-2 text-white border border-light border-opacity-25" id="tab-pwa" data-bs-toggle="pill" data-bs-target="#showcase-pwa" type="button">
-                        <i class="bi bi-phone me-2 text-info"></i> En tu Teléfono Celular
-                    </button>
-                </li>
-            </ul>
-
-            <!-- Tab Content Screens -->
-            <div class="tab-content" id="showcaseContent">
-                <!-- Dashboard Screenshot -->
-                <div class="tab-pane fade show active" id="showcase-dashboard" role="tabpanel">
-                    <div class="row align-items-center g-4">
-                        <div class="col-lg-7">
-                            <div class="browser-mockup">
-                                <div class="browser-header">
-                                    <div class="browser-dots">
-                                        <span class="browser-dot browser-dot-red"></span>
-                                        <span class="browser-dot browser-dot-yellow"></span>
-                                        <span class="browser-dot browser-dot-green"></span>
-                                    </div>
-                                    <div class="browser-address-bar">
-                                        <i class="bi bi-lock-fill text-success me-1"></i> app.samanito.com/control/
-                                    </div>
+                        <div class="col-lg-6 text-lg-end">
+                            <div class="d-inline-flex gap-3">
+                                <div class="bg-white bg-opacity-10 p-3 rounded-4 text-start">
+                                    <div class="fs-3 fw-bold text-success">100%</div>
+                                    <div class="extra-small text-white-50">Trazabilidad de Ordeño</div>
                                 </div>
-                                <div class="browser-body">
-                                    <img src="{% static 'img/mockup_dashboard.png' %}" alt="Samanito Software Ganadero - Dashboard Operativo">
+                                <div class="bg-white bg-opacity-10 p-3 rounded-4 text-start">
+                                    <div class="fs-3 fw-bold text-warning">28 Días</div>
+                                    <div class="extra-small text-white-50">Promedio Descanso Pastos</div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-5 ps-lg-4">
-                            <h3 class="h4 fw-bold text-white mb-3"><i class="bi bi-grid-1x2-fill text-success me-2"></i>Dashboard Principal Todo-En-Uno</h3>
-                            <p class="text-white-50 mb-3">Obtén la radiografía inmediata de tu finca: total de ganado, curva de producción lechera diaria y estado zootécnico del hato en tiempo real.</p>
-                            <ul class="list-unstyled text-white-50 small mb-4">
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Tarjetas métricas con alertas dinámicas.</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Gráficos de ordeño interactivos de 7 y 30 días.</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Acceso directo a lotes, potreros y vacunación.</li>
-                            </ul>
-                            <a href="{% url 'signup' %}" class="btn-glow btn-sm">Ver Demostración <i class="bi bi-arrow-right ms-1"></i></a>
-                        </div>
                     </div>
-                </div>
 
-                <!-- Finanzas Screenshot -->
-                <div class="tab-pane fade" id="showcase-finanzas" role="tabpanel">
-                    <div class="row align-items-center g-4">
-                        <div class="col-lg-7">
-                            <div class="browser-mockup">
-                                <div class="browser-header">
-                                    <div class="browser-dots">
-                                        <span class="browser-dot browser-dot-red"></span>
-                                        <span class="browser-dot browser-dot-yellow"></span>
-                                        <span class="browser-dot browser-dot-green"></span>
-                                    </div>
-                                    <div class="browser-address-bar">
-                                        <i class="bi bi-lock-fill text-success me-1"></i> app.samanito.com/finanzas/
-                                    </div>
+                    <div class="row g-4">
+                        <div class="col-md-6 col-lg-4">
+                            <div class="dark-analytics-card">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <h3 class="h6 text-white fw-bold mb-0">Organización del Rebaño</h3>
+                                    <i class="bi bi-pie-chart text-success fs-5"></i>
                                 </div>
-                                <div class="browser-body">
-                                    <img src="{% static 'img/mockup_finanzas.png' %}" alt="Samanito Software Ganadero - Módulo de Finanzas">
+                                <ul class="list-unstyled small text-white-50 mb-0">
+                                    <li class="d-flex justify-content-between py-2 border-bottom border-white border-opacity-10">
+                                        <span>Lotes en Ordeño:</span> <strong class="text-white">62%</strong>
+                                    </li>
+                                    <li class="d-flex justify-content-between py-2 border-bottom border-white border-opacity-10">
+                                        <span>Vacas en Secado:</span> <strong class="text-white">18%</strong>
+                                    </li>
+                                    <li class="d-flex justify-content-between py-2">
+                                        <span>Novillas & Levante:</span> <strong class="text-white">20%</strong>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-4">
+                            <div class="dark-analytics-card">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <h3 class="h6 text-white fw-bold mb-0">Seguimiento de Producción</h3>
+                                    <i class="bi bi-graph-up-arrow text-warning fs-5"></i>
+                                </div>
+                                <p class="small text-white-50 mb-3">Monitoreo continuo de pesajes por vaca para detectar caídas antes de que se complique el lote.</p>
+                                <div class="progress bg-white bg-opacity-10" style="height: 10px;">
+                                    <div class="progress-bar bg-success" style="width: 88%"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-5 ps-lg-4">
-                            <h3 class="h4 fw-bold text-white mb-3"><i class="bi bi-piggy-bank-fill text-warning me-2"></i>Control de Liquidez Real en Caja</h3>
-                            <p class="text-white-50 mb-3">El módulo contable cruza automáticamente los cobros por entregas de leche y ventas de ganado contra los gastos fijos e insumos consumidos.</p>
-                            <ul class="list-unstyled text-white-50 small mb-4">
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Proyección de egresos semanales, mensuales y anuales.</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Liquidaciones de leche por período de cobro.</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-warning me-2"></i>Cálculo automático de punto de equilibrio por litro.</li>
-                            </ul>
-                            <a href="{% url 'signup' %}" class="btn-glow btn-sm">Optimizar mis Finanzas <i class="bi bi-arrow-right ms-1"></i></a>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Celular/Teléfono Screenshot -->
-                <div class="tab-pane fade" id="showcase-pwa" role="tabpanel">
-                    <div class="row align-items-center g-4">
-                        <div class="col-lg-7 text-center">
-                            <div class="phone-mockup-frame mx-auto">
-                                <img src="{% static 'img/mockup_pwa.png' %}" alt="Samanito Software Ganadero en Teléfono Celular">
+                        <div class="col-md-6 col-lg-4">
+                            <div class="dark-analytics-card">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <h3 class="h6 text-white fw-bold mb-0">Rotación de Pastoreo</h3>
+                                    <i class="bi bi-flower1 text-info fs-5"></i>
+                                </div>
+                                <p class="small text-white-50 mb-3">Días de ocupación y descanso planificados para cuidar tus potreros.</p>
+                                <span class="badge bg-success text-white">Próximo Potrero: Nº 5 (Estrella)</span>
                             </div>
-                        </div>
-                        <div class="col-lg-5 ps-lg-4">
-                            <h3 class="h4 fw-bold text-white mb-3"><i class="bi bi-phone-vibrate-fill text-info me-2"></i>Llévalo en tu Teléfono (Android e iOS)</h3>
-                            <p class="text-white-50 mb-3">Lleva el control completo de tu finca directamente en tu celular. Registra producciones, medicinas y movimientos desde el campo, con o sin señal de internet.</p>
-                            <ul class="list-unstyled text-white-50 small mb-4">
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-info me-2"></i>Acceso rápido con Huella Dactilar.</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-info me-2"></i>Sincronización automática al volver la señal.</li>
-                                <li class="mb-2"><i class="bi bi-check-circle-fill text-info me-2"></i>Registro rápido de pesajes y tratamientos en corral.</li>
-                            </ul>
-                            <a href="{% url 'signup' %}" class="btn-glow btn-sm">Usar en mi Teléfono <i class="bi bi-arrow-right ms-1"></i></a>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- SECCIÓN DE PLANES Y TARIFAS DINK AMICA APP2 -->
-    <section id="planes" class="py-5 bg-light">
-        <div class="container py-4">
-            <div class="text-center max-width-700 mx-auto mb-5">
-                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 rounded-pill mb-2">
-                    <i class="bi bi-shield-check me-1"></i> Planes Dinámicos SaaS (Gestionados por App2)
-                </span>
-                <h2 class="display-6 fw-bold text-dark">Planes transparentes para cada tamaño de finca</h2>
-                <p class="text-muted">Elige el plan ideal para automatizar tu ganadería. Cancela o cambia de plan en cualquier momento.</p>
-            </div>
-
-            <div class="row g-4 align-items-stretch">
-                {% for p in planes_info %}
-                <div class="col-lg-3 col-md-6 reveal-card">
-                    <div class="hover-card-tilt border-0 shadow-sm d-flex flex-column h-100 p-4 bg-white {% if p.destacado %}border border-2 border-success position-relative{% endif %}" style="border-radius: 20px;">
-                        {% if p.destacado %}
-                        <div class="position-absolute top-0 start-50 translate-middle">
-                            <span class="badge bg-success text-white px-3 py-1 rounded-pill shadow-sm small text-uppercase font-heading">
-                                <i class="bi bi-star-fill me-1 text-warning"></i> {{ p.badge }}
+        <!-- ==========================================================================
+             SECCIÓN DE CONFIANZA: PRODUCTORES ACTIVOS Y CARRUSEL DE RESEÑAS DE SATISFACCIÓN
+             ========================================================================== -->
+        <!-- ==========================================================================
+             SECCIÓN DE CONFIANZA Y RESEÑAS (ESTRUCTURA EXACTA SEGÚN WIREFRAME DEL USUARIO)
+             ========================================================================== -->
+        <section class="py-5" id="confianza-resenas">
+            <div class="container">
+                <div class="trust-wireframe-container">
+                    <div class="row align-items-center gy-4">
+                        <!-- Left Side: Wireframe Title & Metric Stats -->
+                        <div class="col-lg-5">
+                            <span class="analytics-metric-badge mb-3 d-inline-flex align-items-center gap-2">
+                                <i class="bi bi-shield-check text-success"></i> Experiencias Reales de Campo
                             </span>
+                            <h2 class="trust-wireframe-title text-white fw-bold mb-3">
+                                Ya <span class="text-accent-green">97</span> productores confían en Samanito para cuidar sus operaciones
+                            </h2>
+                            <p class="text-white-50 fs-6 mb-4">
+                                Productores lecheros, de engorde y doble propósito han sustituido los cuadernos en papel por control digital sin complicaciones.
+                            </p>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="trust-stat-chip">
+                                    <div class="fs-4 fw-bold text-success">500+</div>
+                                    <div class="extra-small text-white-50">Fincas Registradas</div>
+                                </div>
+                                <div class="trust-stat-chip">
+                                    <div class="fs-4 fw-bold text-warning">4.9 / 5.0</div>
+                                    <div class="extra-small text-white-50">Satisfacción Productor</div>
+                                </div>
+                            </div>
                         </div>
-                        {% else %}
-                        <div class="mb-2">
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary border px-2.5 py-1 rounded-pill small">
-                                {{ p.badge }}
-                            </span>
+
+                        <!-- Right Side: Wireframe Single Card Carousel with Flanking Arrows -->
+                        <div class="col-lg-7">
+                            <div id="trustWireframeCarousel" class="carousel slide" data-bs-ride="carousel">
+                                <div class="trust-carousel-flex d-flex align-items-center justify-content-center gap-3">
+                                    <!-- Left Flanking Arrow (◀) -->
+                                    <button class="carousel-nav-arrow-left" type="button" data-bs-target="#trustWireframeCarousel" data-bs-slide="prev" aria-label="Anterior">
+                                        <i class="bi bi-caret-left-fill"></i>
+                                    </button>
+
+                                    <!-- Carousel Inner: Individual Review Cards -->
+                                    <div class="carousel-inner flex-grow-1" style="max-width: 460px;">
+                                        <!-- Review 1: Pedro Pérez (From Wireframe Example) -->
+                                        <div class="carousel-item active">
+                                            <div class="wireframe-review-card">
+                                                <div class="d-flex align-items-center gap-3 mb-3">
+                                                    <div class="wireframe-avatar-circle">P</div>
+                                                    <div>
+                                                        <div class="fw-bold text-white fs-6">Pedro Pérez</div>
+                                                        <div class="extra-small text-sage-light">Hacienda El Samán · Lechería</div>
+                                                    </div>
+                                                </div>
+                                                <p class="wireframe-review-text mb-3">
+                                                    "Dejé el cuaderno de ordeño tras perder varios registros semanales. Ahora cargo los pesajes de las 120 vacas desde el celular en el establo en 5 minutos. Me dio un orden impecable en la finca."
+                                                </p>
+                                                <div class="stars-rating-gold fs-5">★★★★★</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Review 2: Carlos Mendoza -->
+                                        <div class="carousel-item">
+                                            <div class="wireframe-review-card">
+                                                <div class="d-flex align-items-center gap-3 mb-3">
+                                                    <div class="wireframe-avatar-circle">C</div>
+                                                    <div>
+                                                        <div class="fw-bold text-white fs-6">Carlos Mendoza</div>
+                                                        <div class="extra-small text-sage-light">Agropecuaria Los Pinos · Engorde</div>
+                                                    </div>
+                                                </div>
+                                                <p class="wireframe-review-text mb-3">
+                                                    "Veti me avisa exactamente cuándo mover el lote al potrero listo sin sobrepastorear. La planificación de descanso forrajero nos ordenó la rotación completamente."
+                                                </p>
+                                                <div class="stars-rating-gold fs-5">★★★★★</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Review 3: Gustavo Colmenares -->
+                                        <div class="carousel-item">
+                                            <div class="wireframe-review-card">
+                                                <div class="d-flex align-items-center gap-3 mb-3">
+                                                    <div class="wireframe-avatar-circle">G</div>
+                                                    <div>
+                                                        <div class="fw-bold text-white fs-6">Gustavo Colmenares</div>
+                                                        <div class="extra-small text-sage-light">Finca La Esperanza · Doble Propósito</div>
+                                                    </div>
+                                                </div>
+                                                <p class="wireframe-review-text mb-3">
+                                                    "Se me pasaban las fechas de vacunación por tener todo en papeles sueltos. Las alertas sanitarias automáticas me ordenaron la finca por completo sin complicarme la vida."
+                                                </p>
+                                                <div class="stars-rating-gold fs-5">★★★★★</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Right Flanking Arrow (▶) -->
+                                    <button class="carousel-nav-arrow-right" type="button" data-bs-target="#trustWireframeCarousel" data-bs-slide="next" aria-label="Siguiente">
+                                        <i class="bi bi-caret-right-fill"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        {% endif %}
-
-                        <h3 class="h5 fw-bold text-dark mt-2 mb-1">{{ p.nombre }}</h3>
-                        <p class="text-muted small mb-3">{{ p.descripcion }}</p>
-
-                        <div class="my-3 pb-3 border-bottom">
-                            <span class="display-5 fw-bold text-dark font-heading">{{ p.moneda }}{{ p.precio }}</span>
-                            <span class="text-muted small fw-semibold">{{ p.periodo }}</span>
-                        </div>
-
-                        <ul class="list-unstyled text-muted small mb-4 flex-grow-1">
-                            {% for item in p.caracteristicas %}
-                            <li class="mb-2 d-flex align-items-start gap-2">
-                                <i class="bi bi-check-circle-fill text-success mt-0.5"></i>
-                                <span>{{ item }}</span>
-                            </li>
-                            {% endfor %}
-                        </ul>
-
-                        <a href="{% url 'signup' %}" class="{% if p.destacado %}btn-glow w-100 py-2.5{% else %}btn btn-outline-success w-100 rounded-pill py-2.5 fw-bold{% endif %}">
-                            {% if p.codigo == 'TRIAL' %}Probar Gratis 15 Días{% else %}Seleccionar {{ p.nombre }}{% endif %}
-                        </a>
                     </div>
                 </div>
-                {% endfor %}
             </div>
+        </section>
 
-            <!-- Contador de Usuarios Activos (Social Proof Banner) -->
-            <div class="mt-5 p-4 rounded-4 bg-dark text-white text-center shadow-lg position-relative overflow-hidden">
-                <div class="row align-items-center justify-content-center">
+        <!-- ==========================================================================
+             SIMULADOR VETI IA - ASISTENTE OPERATIVO
+             ========================================================================== -->
+        <section class="py-5" id="asistente-ia">
+            <div class="container">
+                <div class="row align-items-center gy-4">
+                    <div class="col-lg-6">
+                        <span class="badge bg-white text-dark border px-3 py-2 rounded-pill mb-3 fw-bold">
+                            <i class="bi bi-stars me-1 text-success"></i> Asistente Operativo Veti IA
+                        </span>
+                        <h2 class="h2 fw-bold text-dark mb-3">Tu Asistente Operativo y Veterinario Virtual 24/7</h2>
+                        <p class="text-secondary mb-4 fs-6">
+                            Prueba cómo Veti responde a las consultas operativas cotidianas de tu finca:
+                        </p>
+
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            <button class="prompt-preset-chip active" data-preset="lactancia">
+                                🐄 Control de Ordeño
+                            </button>
+                            <button class="prompt-preset-chip" data-preset="rotacion">
+                                🌿 Planificación Potreros
+                            </button>
+                            <button class="prompt-preset-chip" data-preset="sanidad">
+                                💉 Sanidad & Vacunas
+                            </button>
+                        </div>
+
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="icon-box-sage flex-shrink-0 mb-0">
+                                    <i class="bi bi-activity"></i>
+                                </div>
+                                <div>
+                                    <h3 class="h6 fw-bold mb-1 text-dark">Alertas de Caídas de Producción</h3>
+                                    <p class="text-muted small mb-0">Detecta anormalidades en vacas individuales para agendar revisión veterinaria preventiva.</p>
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="icon-box-sage flex-shrink-0 mb-0">
+                                    <i class="bi bi-flower1"></i>
+                                </div>
+                                <div>
+                                    <h3 class="h6 fw-bold mb-1 text-dark">Control de Descanso de Pastos</h3>
+                                    <p class="text-muted small mb-0">Indica exactamente qué potrero está listo para el pastoreo según los días de recuperación.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="veti-chat-card-sage">
+                            <div class="d-flex align-items-center justify-content-between pb-3 border-bottom border-white border-opacity-10 mb-4">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle bg-success p-2 text-white d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                                        <i class="bi bi-robot fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-white fs-6">Veti AI - Asistente Operativo</div>
+                                        <div class="text-success small d-flex align-items-center gap-1">
+                                            <i class="bi bi-circle-fill extra-small"></i> En línea 24/7
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="badge bg-white bg-opacity-10 text-white px-3 py-1 rounded-pill small">IA v3.6</span>
+                            </div>
+
+                            <div class="d-flex flex-column gap-3">
+                                <div class="user-msg-bubble-sage ms-auto" id="veti-demo-user-msg">
+                                    "Veti, ¿cuál fue el pesaje total del ordeño de hoy y qué vacas registraron caídas?"
+                                </div>
+
+                                <div class="veti-msg-bubble-sage me-auto">
+                                    <div class="fw-bold text-success mb-2 small">
+                                        <i class="bi bi-stars me-1"></i> Respuesta de Veti:
+                                    </div>
+                                    <p class="mb-2 text-white small" id="veti-demo-response-text">
+                                        El ordeño de hoy sumó <strong class="text-warning">1,480 Litros</strong>. Registré que la <strong class="text-warning">Vaca #104</strong> bajó 4.5 L por segundo día consecutivo.
+                                    </p>
+                                    <div class="veti-recommendation-sage extra-small" id="veti-demo-rec-box">
+                                        📋 <strong class="text-success">Alerta Operativa:</strong> Agendar chequeo veterinario en establo para Vaca #104.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================================================
+             MÓDULOS DE LA PLATAFORMA
+             ========================================================================== -->
+        <section class="py-5" id="modulos">
+            <div class="container">
+                <div class="text-center max-w-700 mx-auto mb-5">
+                    <span class="badge bg-white text-dark border px-3 py-2 rounded-pill font-heading fw-bold">Ecosistema Completo</span>
+                    <h2 class="h2 fw-bold mt-2">Todo lo que tu Finca Necesita en un Solo Lugar</h2>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="sage-card">
+                            <div class="icon-box-sage"><i class="bi bi-cup-hot-fill"></i></div>
+                            <h3 class="h5 fw-bold mb-2">Control de Ordeño</h3>
+                            <p class="text-muted small mb-0">Pesajes de leche por vaca o lote y análisis de rendimiento en cada ordeño.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="sage-card">
+                            <div class="icon-box-sage"><i class="bi bi-flower1"></i></div>
+                            <h3 class="h5 fw-bold mb-2">Rotación de Potreros</h3>
+                            <p class="text-muted small mb-0">Días de ocupación y descanso forrajero para cuidar tus pastizales.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="sage-card">
+                            <div class="icon-box-sage"><i class="bi bi-capsule"></i></div>
+                            <h3 class="h5 fw-bold mb-2">Sanidad & Vacunas</h3>
+                            <p class="text-muted small mb-0">Alertas de tratamientos, inventario de veterinaria y plan sanitario.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="sage-card">
+                            <div class="icon-box-sage"><i class="bi bi-git"></i></div>
+                            <h3 class="h5 fw-bold mb-2">Genética y Trazabilidad</h3>
+                            <p class="text-muted small mb-0">Hoja de vida por animal, árbol genealógico e inseminaciones.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="sage-card">
+                            <div class="icon-box-sage"><i class="bi bi-shield-plus"></i></div>
+                            <h3 class="h5 fw-bold mb-2">Control Sanitario</h3>
+                            <p class="text-muted small mb-0">Calendario de vacunas, desparasitaciones y tratamientos con alertas automáticas.</p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4">
+                        <div class="sage-card">
+                            <div class="icon-box-sage"><i class="bi bi-currency-dollar"></i></div>
+                            <h3 class="h5 fw-bold mb-2">Estructura de Costos</h3>
+                            <p class="text-muted small mb-0">Registro ordenado de compras, insumos y gastos operativos de la finca.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================================================
+             PRECIOS
+             ========================================================================== -->
+        <section class="py-5" id="precios">
+            <div class="container">
+                <div class="text-center max-w-700 mx-auto mb-5">
+                    <span class="badge bg-white text-dark border px-3 py-1 rounded-pill font-heading fw-bold">Planes Flexibles</span>
+                    <h2 class="h2 fw-bold mt-2">Planes Adaptados a tu Finca</h2>
+                    <p class="text-secondary">Prueba gratis 15 días. Sin tarjeta de crédito. Cancela cuando quieras.</p>
+                </div>
+
+                <div class="row g-4 justify-content-center">
+                    {% if planes_info %}
+                        {% for plan in planes_info %}
+                        <div class="col-md-6 col-lg-3">
+                            <div class="pricing-card-sage {% if plan.destacado %}featured{% endif %} d-flex flex-column justify-content-between h-100">
+                                <div>
+                                    {% if plan.badge %}
+                                        <span class="badge bg-success mb-2">{{ plan.badge }}</span>
+                                    {% endif %}
+                                    <h3 class="h5 fw-bold mb-1">{{ plan.nombre }}</h3>
+                                    <p class="text-muted small mb-3">{{ plan.descripcion }}</p>
+                                    
+                                    <div class="mb-3">
+                                        <span class="price">{{ plan.moneda }}{{ plan.precio }}</span>
+                                        <span class="text-muted small">{{ plan.periodo }}</span>
+                                    </div>
+
+                                    <ul class="list-unstyled small text-secondary mb-4">
+                                        {% for c in plan.caracteristicas %}
+                                            <li class="mb-2 d-flex align-items-center gap-2">
+                                                <i class="bi bi-check2 text-success fw-bold fs-6"></i>
+                                                <span>{{ c }}</span>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+
+                                <a href="{% url 'signup' %}" class="btn {% if plan.destacado %}btn-olive{% else %}btn-sage-outline{% endif %} w-100 py-2">
+                                    {% if plan.codigo == 'TRIAL' %}Empezar Gratis{% elif plan.destacado %}Probar {{ plan.nombre }} Gratis{% else %}Empezar con {{ plan.nombre }}{% endif %}
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="pricing-card-sage h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                    <h3 class="h5 fw-bold mb-1">Prueba Trial</h3>
+                                    <p class="text-muted small mb-3">Ideal para probar la plataforma.</p>
+                                    <div class="mb-3"><span class="price">$0</span> <span class="text-muted">/ 15 días</span></div>
+                                </div>
+                                <a href="{% url 'signup' %}" class="btn btn-sage-outline w-100 py-2">Probar Gratis</a>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 col-lg-4">
+                            <div class="pricing-card-sage featured h-100 d-flex flex-column justify-content-between">
+                                <div>
+                                    <span class="badge bg-success mb-2">Más Popular</span>
+                                    <h3 class="h5 fw-bold mb-1">Plan Pro Ganadero</h3>
+                                    <p class="text-muted small mb-3">Gestión integral para fincas en crecimiento.</p>
+                                    <div class="mb-3"><span class="price">$29</span> <span class="text-muted">/ mes</span></div>
+                                </div>
+                                <a href="{% url 'signup' %}" class="btn btn-olive w-100 py-2">Empezar Ahora</a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================================================
+             PREGUNTAS FRECUENTES OPERATIVAS (FAQ)
+             ========================================================================== -->
+        <section class="py-5" id="faq">
+            <div class="container">
+                <div class="text-center max-w-700 mx-auto mb-4">
+                    <span class="badge bg-white text-dark border px-3 py-2 rounded-pill font-heading fw-bold">Preguntas Operativas</span>
+                    <h2 class="h2 fw-bold mt-2">Dudas Frecuentes sobre la Gestión Diaria</h2>
+                </div>
+
+                <div class="row justify-content-center">
                     <div class="col-lg-8">
-                        <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
-                            <i class="bi bi-person-check-fill text-success fs-4"></i>
-                            <h4 class="mb-0 fw-bold font-heading">Comunidad Ganadera en Crecimiento</h4>
-                        </div>
-                        <p class="text-white-50 mb-0">Únete a más de <strong class="text-success fs-5">+{{ usuarios_activos }} ganaderos activos</strong> que ya están transformando la rentabilidad de sus fincas con Samanito.</p>
-                    </div>
-                    <div class="col-lg-3 mt-3 mt-lg-0 text-center text-lg-end">
-                        <a href="{% url 'signup' %}" class="btn-glow py-2.5 px-4">
-                            Crear Cuenta Gratis <i class="bi bi-arrow-right ms-1"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- TABLA COMPARATIVA SEO / GEO -->
-    <section id="comparativa" class="py-5 bg-light position-relative">
-        <div class="container py-4">
-            <div class="text-center max-width-700 mx-auto mb-5">
-                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 rounded-pill mb-2">
-                    <i class="bi bi-shield-shaded me-1"></i> Ventaja Competitiva
-                </span>
-                <h2 class="display-6 fw-bold text-dark">¿Por qué Samanito supera los métodos tradicionales?</h2>
-                <p class="text-muted">Comparativa directa frente al uso de cuadernos de papel y hojas Excel convencionales.</p>
-            </div>
-
-            <div class="table-comparison-container table-responsive">
-                <table class="table table-comparison align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th class="ps-4">Característica / Funcionalidad</th>
-                            <th class="text-center">Cuaderno de Papel</th>
-                            <th class="text-center">Excel Tradicional</th>
-                            <th class="text-center text-white bg-success fw-bold pe-4"><i class="bi bi-check-all me-1"></i> Samanito Software</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="fw-bold ps-4">Trazabilidad en Tiempo Real</td>
-                            <td class="text-center text-danger"><i class="bi bi-x-circle-fill me-1"></i> Imposible</td>
-                            <td class="text-center text-warning"><i class="bi bi-dash-circle-fill me-1"></i> Parcial / Manual</td>
-                            <td class="text-center text-success fw-bold pe-4 bg-success bg-opacity-10"><i class="bi bi-check-circle-fill me-1"></i> Automática en la nube</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold ps-4">Cálculo de Liquidez Real en Caja</td>
-                            <td class="text-center text-danger"><i class="bi bi-x-circle-fill me-1"></i> No disponible</td>
-                            <td class="text-center text-warning"><i class="bi bi-dash-circle-fill me-1"></i> Fórmulas complejas</td>
-                            <td class="text-center text-success fw-bold pe-4 bg-success bg-opacity-10"><i class="bi bi-check-circle-fill me-1"></i> Instantáneo</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold ps-4">Descuento de Farmacia por Vacunación</td>
-                            <td class="text-center text-danger"><i class="bi bi-x-circle-fill me-1"></i> No disponible</td>
-                            <td class="text-center text-danger"><i class="bi bi-x-circle-fill me-1"></i> Requiere macros</td>
-                            <td class="text-center text-success fw-bold pe-4 bg-success bg-opacity-10"><i class="bi bi-check-circle-fill me-1"></i> Integrado al 100%</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold ps-4">Acceso por Huella Digital (Biometría)</td>
-                            <td class="text-center text-danger"><i class="bi bi-x-circle-fill me-1"></i> N/A</td>
-                            <td class="text-center text-danger"><i class="bi bi-x-circle-fill me-1"></i> No soporta</td>
-                            <td class="text-center text-success fw-bold pe-4 bg-success bg-opacity-10"><i class="bi bi-check-circle-fill me-1"></i> Directo en tu Celular</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-
-    <!-- PREGUNTAS FRECUENTES (FAQ ACCORDION) -->
-    <section id="faq" class="py-5 bg-white">
-        <div class="container py-4">
-            <div class="text-center max-width-700 mx-auto mb-5">
-                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-1.5 rounded-pill mb-2">
-                    <i class="bi bi-question-circle me-1"></i> Dudas Comunes
-                </span>
-                <h2 class="display-6 fw-bold text-dark">Preguntas Frecuentes</h2>
-                <p class="text-muted">Resolvemos las inquietudes más habituales sobre la implementación de Samanito en tu ganadería.</p>
-            </div>
-
-            <div class="row justify-content-center">
-                <div class="col-lg-9">
-                    <div class="accordion accordion-custom" id="faqAccordion">
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                    <i class="bi bi-patch-question-fill text-success me-2 fs-5"></i> ¿Qué necesito para empezar a usar Samanito en mi finca?
-                                </button>
-                            </h3>
-                            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body text-muted">
-                                    Solo necesitas crear una cuenta desde nuestro formulario web. Puedes comenzar agregando el nombre de tu finca, tu inventario inicial de vacas y configurar tus gastos recurrentes en menos de 5 minutos.
+                        <div class="accordion" id="faqAccordion">
+                            <div class="accordion-item-sage">
+                                <h3 class="accordion-header" id="faqHead1">
+                                    <button class="accordion-button accordion-button-sage" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" aria-expanded="true">
+                                        ¿Cómo simplifica Samanito el registro diario de ordeño?
+                                    </button>
+                                </h3>
+                                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                                    <div class="p-3 text-secondary small">Permite registrar pesajes por vaca o por lote completo en segundos desde el celular o tablet directamente en el establo, eliminando el trasbordo manual del cuaderno.</div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                    <i class="bi bi-fingerprint text-success me-2 fs-5"></i> ¿Cómo funciona el inicio de sesión con huella dactilar?
-                                </button>
-                            </h3>
-                            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body text-muted">
-                                    Una vez ingreses a tu cuenta en tu teléfono móvil (Android o iPhone), puedes activar la autenticación biométrica para entrar al sistema con un toque sin necesidad de escribir contraseñas.
+                            <div class="accordion-item-sage">
+                                <h3 class="accordion-header" id="faqHead2">
+                                    <button class="accordion-button accordion-button-sage collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                                        ¿Cómo ayuda Veti IA en la rotación de potreros?
+                                    </button>
+                                </h3>
+                                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="p-3 text-secondary small">Veti lleva la cuenta automática de los días de descanso y ocupación de cada potrero, indicándote cuál está en su punto óptimo de rebrote para mover el lote de ordeño.</div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="accordion-item">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                    <i class="bi bi-shield-lock-fill text-success me-2 fs-5"></i> ¿Mis datos están seguros en la plataforma?
-                                </button>
-                            </h3>
-                            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body text-muted">
-                                    Sí, Samanito utiliza almacenamiento cifrado multi-tenant y respaldos automáticos diarios. Tus registros financieros y zootécnicos permanecen privados y protegidos bajo tu usuario.
+                            <div class="accordion-item-sage">
+                                <h3 class="accordion-header" id="faqHead3">
+                                    <button class="accordion-button accordion-button-sage collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                                        ¿Cómo funciona el ingreso con huella dactilar para el personal de la finca?
+                                    </button>
+                                </h3>
+                                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="p-3 text-secondary small">El personal ingresa tocando el sensor de huella o usando reconocimiento facial de su propio teléfono (estándar FIDO2), sin necesidad de recordar claves ni correos.</div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Módulo de Compartir en Redes -->
-                    <div class="text-center mt-5 pt-3 border-top">
-                        <p class="fw-bold small text-muted text-uppercase mb-3">Compartir esta plataforma con otros productores</p>
-                        <div class="d-flex justify-content-center gap-2 flex-wrap">
-                            <button class="btn btn-sm btn-outline-success rounded-pill px-3" data-share="whatsapp">
-                                <i class="bi bi-whatsapp me-1"></i> WhatsApp
-                            </button>
-                            <button class="btn btn-sm btn-outline-dark rounded-pill px-3" data-share="x">
-                                <i class="bi bi-twitter-x me-1"></i> X / Twitter
-                            </button>
-                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3" data-share="linkedin">
-                                <i class="bi bi-linkedin me-1"></i> LinkedIn
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-share="copy">
-                                <i class="bi bi-link-45deg me-1"></i> Copiar Enlace
-                            </button>
+                            <div class="accordion-item-sage">
+                                <h3 class="accordion-header" id="faqHead4">
+                                    <button class="accordion-button accordion-button-sage collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                                        ¿Puedo registrar datos directamente en el potrero o corral?
+                                    </button>
+                                </h3>
+                                <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="p-3 text-secondary small">Sí. La interfaz está optimizada para pantallas táctiles de celulares y tablets en condiciones de campo, permitiendo cargas rápidas sin complicación.</div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item-sage">
+                                <h3 class="accordion-header" id="faqHead5">
+                                    <button class="accordion-button accordion-button-sage collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                                        ¿Cómo migro mis anotaciones del cuaderno o plantillas de Excel?
+                                    </button>
+                                </h3>
+                                <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="p-3 text-secondary small">Nuestro equipo de soporte te asiste gratuitamente para cargar tu rebaño inicial y la lista de potreros para que empieces a operar desde el primer día.</div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item-sage">
+                                <h3 class="accordion-header" id="faqHead6">
+                                    <button class="accordion-button accordion-button-sage collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">
+                                        ¿Qué tipo de alertas operativas y sanitarias emite el sistema?
+                                    </button>
+                                </h3>
+                                <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                                    <div class="p-3 text-secondary small">Alertas tempranas por caídas de producción en vacas específicas, fechas de vacunación del plan sanitario y avisos de secado o parto de novillas.</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </section>
+    </main>
+
+    <!-- WHATSAPP VENTAS FLOTANTE -->
+    <div class="whatsapp-float-container dropup">
+        <button class="whatsapp-float border-0" type="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" id="whatsapp-sales-btn">
+            <i class="bi bi-whatsapp fs-5"></i>
+            <span class="whatsapp-float-label">¿Dudas? Escríbenos</span>
+        </button>
+        <ul class="dropdown-menu p-2 border-0 shadow-lg" style="border-radius: var(--radius-md); min-width: 220px; position: absolute; bottom: 100%; right: 0; top: auto; left: auto; margin-bottom: 15px;">
+            <li>
+                <a class="dropdown-item d-flex align-items-center gap-3 py-2 fw-semibold rounded" href="https://wa.me/584243284360?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20Samanito%20para%20mi%20finca" target="_blank" rel="noopener">
+                    <span class="fs-4 lh-1">🇻🇪</span> 
+                    <span>Venezuela <br><small class="text-muted fw-normal">+58 424 328 4360</small></span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center gap-3 py-2 fw-semibold rounded mt-1" href="https://wa.me/5491138346322?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20Samanito%20para%20mi%20finca" target="_blank" rel="noopener">
+                    <span class="fs-4 lh-1">🇦🇷</span> 
+                    <span>Argentina <br><small class="text-muted fw-normal">+54 9 11 3834-6322</small></span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- MOBILE STICKY CTA -->
+    <div class="d-md-none fixed-bottom mobile-sticky-cta" id="mobile-sticky-cta">
+        <div class="d-flex align-items-center justify-content-between gap-2">
+            <div>
+                <div class="fw-bold text-white small">Samanito Ganadería</div>
+                <div class="text-success small">15 Días Prueba Gratis</div>
+            </div>
+            <a href="{% url 'signup' %}" class="btn btn-olive btn-sm px-3">Probar Gratis</a>
         </div>
-    </section>
+    </div>
 
     <!-- FOOTER -->
-    <footer class="bg-dark text-white py-5" style="background-color: #0b130e !important; border-top: 1px solid rgba(255,255,255,0.1);">
+    <footer class="footer-natural">
         <div class="container">
-            <div class="row g-4 mb-4">
-                <div class="col-lg-5">
-                    <a class="d-flex align-items-center text-white text-decoration-none mb-3" href="/">
-                        <img src="{% static 'img/Samanito_logo.png' %}" alt="Samanito Software Logo Footer" width="36" height="36" class="me-2">
-                        <span class="fs-4 fw-bold font-heading text-white">Samanito</span>
-                    </a>
-                    <p class="text-white-50 small mb-3">Plataforma SaaS para la transformación digital del sector ganadero. Control inteligente de rebaños, finanzas y producción lechera.</p>
+            <div class="row gy-4 mb-4">
+                <div class="col-lg-4">
+                    <img src="{% static 'img/Samanito_logo.png' %}" height="34" alt="Samanito - Logo" class="brand-logo mb-3" loading="lazy">
+                    <p class="small text-white-50 mb-3">Samanito es la plataforma SaaS para la gestión integral de fincas ganaderas e Inteligencia Artificial.</p>
+                    <div class="text-white-50 small">© {% now "Y" %} Samanito Software SaaS. Todos los derechos reservados.</div>
                 </div>
-                <div class="col-lg-3 col-6">
-                    <h4 class="h6 fw-bold text-uppercase text-light mb-3">Enlaces Rápidos</h4>
-                    <ul class="list-unstyled mb-0 small">
-                        <li class="mb-2"><a href="{% url 'login' %}" class="text-white-50 text-decoration-none footer-link">Iniciar Sesión</a></li>
-                        <li class="mb-2"><a href="{% url 'signup' %}" class="text-white-50 text-decoration-none footer-link">Crear Cuenta Finca</a></li>
-                        <li class="mb-2"><a href="#caracteristicas" class="text-white-50 text-decoration-none footer-link">Módulos Operativos</a></li>
-                        <li class="mb-2"><a href="#capturas" class="text-white-50 text-decoration-none footer-link">Capturas del Sistema</a></li>
+
+                <div class="col-6 col-lg-2">
+                    <h5>Navegación</h5>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="#showcase-app">Demostración App</a></li>
+                        <li class="mb-2"><a href="#analitica-finca">Control Operativo</a></li>
+                        <li class="mb-2"><a href="#calculadora-roi">Eficiencia Operativa</a></li>
                     </ul>
                 </div>
-                <div class="col-lg-4 col-6">
-                    <h4 class="h6 fw-bold text-uppercase text-light mb-3">Soporte & Contacto</h4>
-                    <p class="text-white-50 small mb-2"><i class="bi bi-envelope text-success me-2"></i> soporte@samanito.com</p>
-                    <p class="text-white-50 small mb-2"><i class="bi bi-shield-check text-success me-2"></i> Plataforma SaaS Segura 24/7</p>
-                    <p class="text-white-50 small mb-0"><i class="bi bi-globe text-success me-2"></i> Cobertura Nacional e Internacional</p>
+
+                <div class="col-6 col-lg-2">
+                    <h5>Módulos</h5>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2"><a href="#modulos">Control Lechero</a></li>
+                        <li class="mb-2"><a href="#modulos">Potreros</a></li>
+                        <li class="mb-2"><a href="#modulos">Sanidad Animal</a></li>
+                    </ul>
                 </div>
-            </div>
-            <div class="border-top border-secondary border-opacity-50 pt-4 text-center text-white-50 small">
-                <p class="mb-0">&copy; 2026 Samanito SaaS Software Ganadero. Todos los derechos reservados.</p>
+
+                <div class="col-lg-4">
+                    <h5>Contacto</h5>
+                    <p class="small text-white-50 mb-2"><i class="bi bi-envelope me-2 text-success"></i>soporte@samanito.com</p>
+                    <p class="small text-white-50 mb-2"><i class="bi bi-whatsapp me-2 text-success"></i>+58 424 328 4360</p>
+                    <p class="small text-white-50 mb-3"><i class="bi bi-telephone me-2 text-success"></i>+54 9 11 3834-6322</p>
+                    <div class="d-flex gap-3 mt-3">
+                        <a href="https://www.instagram.com/samanito.sys/" target="_blank" class="text-white-50 text-decoration-none fs-5"><i class="bi bi-instagram"></i></a>
+                        <a href="https://www.facebook.com/profile.php?id=61595091956007&locale=es_LA" target="_blank" class="text-white-50 text-decoration-none fs-5"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </div>
             </div>
         </div>
     </footer>
 
-    <!-- BOTÓN DE CTA FLOTANTE INFERIOR EXCLUSIVO MÓVIL -->
-    <div class="d-md-none mobile-sticky-cta">
-        <div class="d-flex gap-2">
-            <a href="{% url 'signup' %}" class="btn-glow w-100 py-2.5 fs-6">
-                <i class="bi bi-rocket-takeoff me-1"></i> Probar Gratis
-            </a>
-            <a href="{% url 'login' %}" class="btn btn-outline-light rounded-pill px-3 py-2.5">
-                <i class="bi bi-box-arrow-in-right"></i>
-            </a>
-        </div>
-    </div>
-
-    <!-- SCRIPTS DE GSAP 3 & SCROLLTRIGGER CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
-
-    <!-- Bootstrap 5.3 JS -->
+    <!-- Bootstrap 5.3 Script -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- JS Principal Landing -->
-    <script src="{% static 'js/main.js' %}?v={% now 'U' %}"></script>
+    <script src="{% static 'js/landing.js' %}?v={% now 'U' %}"></script>
 </body>
 </html>
